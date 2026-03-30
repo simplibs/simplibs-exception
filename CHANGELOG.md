@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+
+## [0.1.1] - 2026-03-30
+
+### Fixed
+- README: Corrected outdated import paths and library references.
+- Documentation: Fixed example code snippets to align with the current package structure.
+- 
+
 ## [0.1.0] - 2026-03-30
 
 ### Added

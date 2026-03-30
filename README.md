@@ -1,4 +1,4 @@
-# simple-exception
+# simplibs-exception
 
 > An exception that tries to be a friend. A structured exception with diagnostic
 > output, allowing you to describe the cause of an error, the circumstances of
@@ -7,8 +7,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Licence](https://img.shields.io/badge/licence-MIT-green)
-![PyPI](https://img.shields.io/pypi/v/simple-exception)
-
+![PyPI](https://img.shields.io/pypi/v/simplibs-exception)
 ```
 ═════════════════════════════════════════════════════════════════
 ⚠️ VALIDATION ERROR: parameter age
@@ -37,19 +36,19 @@ File info: File: main.py | Line: 42 | Path: ... | Function: validate
 - [Custom mode](#custom-mode)
 - [Serialisation](#serialisation)
 - [Utils](#utils)
-- [About the Simple ecosystem](#about-the-simple-ecosystem)
+- [About the simplibs ecosystem](#about-the-simplibs-ecosystem)
 
 ---
 
 ## Installation
-
 ```bash
-pip install simple-exception
+pip install simplibs-exception
+```
+```python
+from simplibs.exception import SimpleException
 ```
 
-```python
-from simple_exception import SimpleException
-```
+> Note: This library automatically installs `simplibs-sentinels` as a core dependency.
 
 ---
 
@@ -67,7 +66,6 @@ parameter is required, so you can start with nothing and add detail as needed.
 Useful during rapid development when you just want to know *where* an exception
 occurred without worrying about its content yet. Mark the spot and come back
 to it later:
-
 ```python
 raise SimpleException()
 # ═══════════════════════════════════════════════════════════════════
@@ -80,7 +78,6 @@ raise SimpleException()
 If you don't need structure — or just want to jot down an initial thought and
 fill in the details later — `SimpleException` behaves exactly like `Exception`,
 but with a nicer default output:
-
 ```python
 raise SimpleException("Database connection failed")
 # ═══════════════════════════════════════════════════════════════════
@@ -96,7 +93,6 @@ it doesn't just announce. You have full freedom over what you report and which
 parameters you use. For the exception to be truly useful, it's worth filling
 in the core parameters and especially `how_to_fix` — but none of it is
 required:
-
 ```python
 raise SimpleException(
     value_label = "parameter age",
@@ -125,28 +121,29 @@ raise SimpleException(
 An overview of all parameters available when raising the exception. All are
 optional — the exception works without any of them (see above).
 
-| Parameter       | Type                      | Description                                                    |
-|-----------------|---------------------------|----------------------------------------------------------------|
-| `message`       | `str`                     | Free-form message — an alternative to the structured fields    |
-| `value`         | `object`                  | The value that caused the exception                            |
-| `value_label`   | `str`                     | Human-readable label for the value (e.g. `"parameter age"`)   |
-| `expected`      | `str`                     | What was expected                                              |
-| `problem`       | `str`                     | What is wrong                                                  |
-| `context`       | `str`                     | Additional context — only include if it adds meaningful info   |
-| `how_to_fix`    | `str \| tuple[str, ...]`  | Tips on how to fix the error — one or more                     |
-| `error_name`    | `str`                     | Error name in the output (default: `"ERROR"`)                  |
-| `exception`     | `type[Exception]`         | Exception class dynamically added to the instance ancestors    |
+| Parameter       | Type                      | Description                                                      |
+|-----------------|---------------------------|------------------------------------------------------------------|
+| `message`       | `str`                     | Free-form message — an alternative to the structured fields      |
+| `value`         | `object`                  | The value that caused the exception                              |
+| `value_label`   | `str`                     | Human-readable label for the value (e.g. `"parameter age"`)     |
+| `expected`      | `str`                     | What was expected                                                |
+| `problem`       | `str`                     | What is wrong                                                    |
+| `context`       | `str`                     | Additional context — only include if it adds meaningful info     |
+| `how_to_fix`    | `str \| tuple[str, ...]`  | Tips on how to fix the error — one or more                       |
+| `error_name`    | `str`                     | Error name in the output (default: `"ERROR"`)                    |
+| `exception`     | `type[Exception]`         | Exception class dynamically added to the instance ancestors      |
 | `get_location`  | `bool \| int`             | Enable/disable or set stack depth for location (default: `True`) |
-| `skip_locations`| `tuple[str, ...]`         | File path patterns to skip when resolving the call location    |
-| `oneline`       | `bool`                    | Single-line output for this specific call                      |
+| `skip_locations`| `tuple[str, ...]`         | File path patterns to skip when resolving the call location      |
+| `oneline`       | `bool`                    | Single-line output for this specific call                        |
 
 ### More about the `exception` parameter
 
 The `exception` parameter allows you to pass a specific Python exception into
 the ancestors of the instance. The raised exception will then be catchable as
 that specific type — without requiring static inheritance:
-
 ```python
+from simplibs.exception import SimpleException
+
 # As a class — the exception behaves as a ValueError
 raise SimpleException(exception=ValueError, problem="negative value")
 
@@ -171,9 +168,8 @@ except ValueError:
 example for a specific validation domain. You define the shared default
 interface once, so that callers don't have to repeat the same parameters every
 time:
-
 ```python
-from simple_exception import SimpleException
+from simplibs.exception import SimpleException
 
 class AgeError(SimpleException):
     error_name = "VALIDATION ERROR"
@@ -210,7 +206,6 @@ raise AgeError(
 The library automatically validates every subclass at definition time —
 checking for typos and incorrect attribute types. The error surfaces
 immediately on import, not somewhere at runtime:
-
 ```python
 class BadError(SimpleException):
     expekted = "a positive integer"  # typo in the attribute name
@@ -233,7 +228,6 @@ settings or overridden for a single call using `oneline=True`.
 | `LOG`     | `key=value` format for log parsers (Datadog, Splunk, ...)             |
 
 ### PRETTY (default)
-
 ```
 ═════════════════════════════════════════════════════════════════
 ⚠️ VALIDATION ERROR: parameter age
@@ -249,7 +243,6 @@ File info: File: main.py | Line: 42 | Path: ... | Function: validate
 ```
 
 ### SIMPLE
-
 ```
 ⚠️ VALIDATION ERROR: parameter age
 Expected:  a positive integer
@@ -261,13 +254,11 @@ File info: File: main.py | Line: 42 | Path: ... | Function: validate
 ```
 
 ### ONELINE
-
 ```
 ⚠️ VALIDATION ERROR | parameter age | Expected: a positive integer | Got: -5 (int) | Problem: value is negative | File: main.py | Line: 42
 ```
 
 ### LOG
-
 ```
 error=VALIDATION ERROR value_label='parameter age' expected='a positive integer' value='-5 (int)' problem='value is negative' file='main.py' line=42
 ```
@@ -279,9 +270,8 @@ error=VALIDATION ERROR value_label='parameter age' expected='a positive integer'
 `SimpleExceptionSettings` is the central configuration for the entire
 ecosystem. Changes apply to all exceptions in the project — no need to
 override anything on individual classes:
-
 ```python
-from simple_exception import SimpleExceptionSettings, LOG
+from simplibs.exception import SimpleExceptionSettings, LOG
 
 # Change the output mode — for example in production
 SimpleExceptionSettings.DEFAULT_MESSAGE_MODE = LOG
@@ -299,11 +289,9 @@ SimpleExceptionSettings.reset()
 
 Settings are protected by internal validation — if you provide an invalid
 value, you get a clear error message instead of a mysterious crash:
-
 ```python
 SimpleExceptionSettings.DEFAULT_GET_LOCATION = "enabled"
 ```
-
 ```
 ═════════════════════════════════════════════════════════════════
 ⚠️ SETTINGS ERROR: DEFAULT_GET_LOCATION
@@ -324,10 +312,9 @@ Problem:   value is neither an int nor a bool
 
 If none of the built-in modes suits your needs, you can create your own.
 Simply inherit from `ModeBase` and implement one method:
-
 ```python
-from simple_exception import ModeBase, SimpleExceptionSettings
-from simple_exception.core import SimpleExceptionData
+from simplibs.exception import ModeBase, SimpleExceptionSettings
+from simplibs.exception.core import SimpleExceptionData
 
 class SlackMode(ModeBase):
     """Output formatted for Slack notifications."""
@@ -350,14 +337,14 @@ When creating a custom mode, you can define up to three output methods.
 Only `_full_outcome` is required — `_empty_outcome` and `_message_outcome`
 have sensible defaults and can be overridden only when needed.
 
-All fields available via `data` are listed in the [Parameters](#parameters) section. 
+All fields available via `data` are listed in the [Parameters](#parameters) section.
 In addition, `ModeBase` provides three helper methods for formatting:
 
-| Method                            | Description                                              |
-|-----------------------------------|----------------------------------------------------------|
+| Method                            | Description                                               |
+|-----------------------------------|-----------------------------------------------------------|
 | `_print_intro_line(data)`         | Builds the opening line with `error_name` and `value_label` |
-| `_print_value_with_type(data)`    | Value with type — e.g. `"hello" (str)`                   |
-| `_print_caller_info(caller_info)` | Formats the location as a string or dictionary           |
+| `_print_value_with_type(data)`    | Value with type — e.g. `"hello" (str)`                    |
+| `_print_caller_info(caller_info)` | Formats the location as a string or dictionary            |
 
 ---
 
@@ -365,8 +352,9 @@ In addition, `ModeBase` provides three helper methods for formatting:
 
 Every `SimpleException` instance can serialise its state — useful for logging,
 transport, or storing error reports:
-
 ```python
+from simplibs.exception import SimpleException
+
 e = SimpleException(
     value_label = "parameter age",
     expected    = "a positive integer",
@@ -378,7 +366,6 @@ e.to_dict()        # public attributes as a dictionary — UNSET values omitted
 e.to_json()        # JSON string — same data, suited for transport
 e.to_debug_dict()  # complete state including internal values — for debugging
 ```
-
 ```python
 e.to_dict()
 # {
@@ -394,7 +381,7 @@ e.to_dict()
 
 ## Utils
 
-Alongside the exception itself, the library provides three utility tools that
+Alongside the exception itself, the library provides two utility tools that
 are also available independently.
 
 ### bool_or_exception
@@ -403,9 +390,8 @@ A shortcut for the pattern where a function either returns `False` or raises
 a `SimpleException`. Eliminates repetitive conditional code in places where
 a `return_bool` parameter exists — a flag that controls whether to return
 `False` on failure instead of raising:
-
 ```python
-from simple_exception.utils import bool_or_exception
+from simplibs.exception import bool_or_exception
 
 def validate_age(age: int, return_bool: bool = False) -> bool:
     if age <= 0:
@@ -424,9 +410,8 @@ A diagnostic function that walks the call stack and returns information about
 the first relevant frame — file, line number, function name, and full path.
 The function never raises an exception — it returns `None` on failure. It is
 completely independent of the rest of the library and can be used anywhere:
-
 ```python
-from simple_exception.utils import extract_caller_info
+from simplibs.exception import extract_caller_info
 
 info = extract_caller_info()
 # {
@@ -439,14 +424,23 @@ info = extract_caller_info()
 
 ---
 
-## About the Simple ecosystem
+## About the simplibs ecosystem
 
-`simple-exception` is the foundation of the **Simple ecosystem** — it gives
+`simplibs-exception` is the foundation of the **simplibs** ecosystem — it gives
 the ecosystem a voice, helping it communicate with the user in a clear and
 human way: not just reporting what went wrong, but pointing towards a fix.
+The name *simplibs* is short for *simple libraries*.
 
-The Simple ecosystem is a collection of small, self-contained Python libraries.
-Each one solves exactly one thing — but all of them share a common philosophy:
+This library builds on one other simplibs package:
+
+- **`simplibs-sentinels`** — sentinel values shared across the ecosystem.
+  `UNSET` is used throughout `simplibs-exception` to distinguish between
+  a parameter that was not provided and one explicitly set to `None`:
+```python
+from simplibs.sentinels import UNSET
+```
+
+All libraries in the simplibs ecosystem share a common philosophy:
 
 **Dyslexia-friendly** — minimise mental load. Atomise code into self-contained
 units, name files after the logic they contain, write explanations that describe
