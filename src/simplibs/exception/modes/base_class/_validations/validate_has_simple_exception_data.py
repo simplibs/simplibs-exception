@@ -1,5 +1,5 @@
-# Commons
-from ....core import SimpleExceptionData
+# Outers
+from ....base import SimpleExceptionData
 # Inners
 from .SimpleExceptionModeError import SimpleExceptionModeError
 

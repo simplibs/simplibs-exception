@@ -1,6 +1,6 @@
 from typing import cast, Self
 from simplibs.sentinels import UNSET, UnsetType
-# Commons
+# Outers
 from ....settings import SimpleExceptionSettings as S
 
 

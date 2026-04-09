@@ -2,7 +2,7 @@
 Tests for SimpleExceptionSettingsError and validate_dynamic_cls_cache — inheritance, error name, and cache validation.
 """
 import pytest
-from simplibs.exception.core import SimpleExceptionInternalError
+from simplibs.exception.base import SimpleExceptionInternalError
 from simplibs.exception.settings._meta.validations.SimpleExceptionSettingsError import SimpleExceptionSettingsError
 from simplibs.exception.settings._meta.validations.validate_dynamic_cls_cache import validate_dynamic_cls_cache
 

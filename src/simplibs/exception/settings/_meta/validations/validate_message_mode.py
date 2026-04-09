@@ -1,4 +1,4 @@
-# Commons
+# Outers
 from ....modes.base_class import ModeBase
 # Inners
 from .SimpleExceptionSettingsError import SimpleExceptionSettingsError

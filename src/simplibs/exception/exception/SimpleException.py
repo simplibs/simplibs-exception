@@ -1,6 +1,6 @@
 from simplibs.sentinels import UNSET, UnsetType
-# Commons
-from ..core import SimpleExceptionData
+# Outers
+from ..base import SimpleExceptionData
 from ..settings import SimpleExceptionSettings as S
 # Inners
 from ._mixins.dunders import DunderInitSubclassMixin, DunderNewMixin

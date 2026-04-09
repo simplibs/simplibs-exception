@@ -4,7 +4,7 @@ Tests for ONELINE mode — single-line guarantee, field content, field order, an
 import pytest
 from unittest.mock import patch
 from simplibs.exception.modes.ONELINE import ONELINE
-from simplibs.exception.core.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
 
 MOCK_CALLER_INFO = {
     "file": "t.py",

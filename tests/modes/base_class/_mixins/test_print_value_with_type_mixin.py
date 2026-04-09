@@ -3,7 +3,7 @@ Tests for PrintValueWithTypeMixin — value formatting with type, intro prefix, 
 """
 import pytest
 from simplibs.sentinels import UNSET
-from simplibs.exception.core.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
 from simplibs.exception.modes.base_class._mixins.PrintValueWithType import PrintValueWithTypeMixin
 
 

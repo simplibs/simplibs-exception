@@ -49,7 +49,7 @@ at module level would create a circular dependency:
     utils/__init__.py
       → exception_helper/bool_or_exception.py
         → exception/SimpleException.py
-          → core/SimpleExceptionData.py
+          → base/SimpleExceptionData.py
             → utils/__init__.py  ← cycle
 
 A lazy import inside the function breaks this cycle — `SimpleException` is

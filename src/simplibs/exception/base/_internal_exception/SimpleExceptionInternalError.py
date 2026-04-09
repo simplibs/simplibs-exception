@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-# Commons
+# Outers
 from ..data import SimpleExceptionData
 
 
@@ -42,7 +42,7 @@ the `PRETTY` mode.
 
 ## Isolation and lazy import
 `PRETTY` is loaded lazily inside `__post_init__` to avoid a circular import —
-`SimpleExceptionInternalError` lives in `core/_internal_exception` and a
+`SimpleExceptionInternalError` lives in `base/_internal_exception` and a
 standard top-level import of `modes` would pull it back in. The lazy import
 breaks this cycle and loads the mode only when it is actually needed.
 

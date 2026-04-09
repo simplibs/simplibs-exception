@@ -1,5 +1,5 @@
-# Commons
-from ....core import SimpleExceptionData
+# Outers
+from ....base import SimpleExceptionData
 # Inners
 from ._utils import check_children_class_attributes
 

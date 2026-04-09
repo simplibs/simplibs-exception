@@ -4,7 +4,7 @@ Tests for check_children_class_attributes — valid subclasses, unknown attribut
 import pytest
 from typing import Any
 from simplibs.exception.exception._mixins.dunders._utils.check_children_class_attributes import check_children_class_attributes
-from simplibs.exception.core import SimpleExceptionInternalError
+from simplibs.exception.base import SimpleExceptionInternalError
 
 
 # -----------------------------------------------------------------------------

@@ -4,7 +4,7 @@ Tests for ModeBase — scenario dispatching, caller_info resolution, validation,
 import pytest
 from unittest.mock import patch
 from simplibs.exception.modes.base_class.ModeBase import ModeBase
-from simplibs.exception.core.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
 from simplibs.exception.modes.base_class._validations.SimpleExceptionModeError import SimpleExceptionModeError
 
 

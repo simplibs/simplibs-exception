@@ -3,8 +3,8 @@ Tests for SimpleExceptionInternalError — inheritance, initialization, and subc
 """
 import pytest
 from dataclasses import dataclass
-from simplibs.exception.core._internal_exception.SimpleExceptionInternalError import SimpleExceptionInternalError
-from simplibs.exception.core.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.base._internal_exception.SimpleExceptionInternalError import SimpleExceptionInternalError
+from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
 
 
 # -----------------------------------------------------------------------------

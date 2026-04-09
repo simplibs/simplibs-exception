@@ -2,8 +2,8 @@
 Tests for validate_has_simple_exception_data and SimpleExceptionModeError — validation and error group.
 """
 import pytest
-from simplibs.exception.core import SimpleExceptionInternalError
-from simplibs.exception.core.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.base import SimpleExceptionInternalError
+from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
 from simplibs.exception.modes.base_class._validations.SimpleExceptionModeError import SimpleExceptionModeError
 from simplibs.exception.modes.base_class._validations.validate_has_simple_exception_data import validate_has_simple_exception_data
 

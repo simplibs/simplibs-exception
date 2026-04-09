@@ -4,7 +4,7 @@ Tests for SimpleExceptionData — structure, default values, and initialization.
 import pytest
 from dataclasses import is_dataclass
 from simplibs.sentinels import UNSET
-from simplibs.exception.core.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
 
 
 # -----------------------------------------------------------------------------

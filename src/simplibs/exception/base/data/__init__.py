@@ -2,7 +2,7 @@ from .SimpleExceptionData import SimpleExceptionData
 
 
 _DESIGN_NOTES = """
-# core/data
+# base/data
 
 ## Contents
 The data layer of the library — contains the base structures defining the

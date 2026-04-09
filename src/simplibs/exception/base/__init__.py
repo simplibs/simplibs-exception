@@ -3,7 +3,7 @@ from ._internal_exception import SimpleExceptionInternalError
 
 
 _DESIGN_NOTES = """
-# core
+# base
 
 ## Contents
 The data layer of the library — defines the exception structure and the base

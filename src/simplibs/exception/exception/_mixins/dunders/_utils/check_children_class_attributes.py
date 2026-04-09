@@ -1,6 +1,6 @@
 from typing import Any, get_origin
-# Commons
-from .....core import SimpleExceptionInternalError
+# Outers
+from .....base import SimpleExceptionInternalError
 
 
 def check_children_class_attributes(parent_class: type, child_class: type) -> None:

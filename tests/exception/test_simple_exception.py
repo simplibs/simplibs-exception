@@ -4,7 +4,7 @@ Tests for SimpleException — instantiation, parameter normalisation, subclassin
 import pytest
 from simplibs.sentinels import UNSET
 from simplibs.exception.exception.SimpleException import SimpleException
-from simplibs.exception.core import SimpleExceptionInternalError
+from simplibs.exception.base import SimpleExceptionInternalError
 from simplibs.exception.settings import SimpleExceptionSettings as S
 
 

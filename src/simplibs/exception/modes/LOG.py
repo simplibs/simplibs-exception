@@ -1,6 +1,6 @@
 from simplibs.sentinels import UNSET
-# Commons
-from ..core import SimpleExceptionData
+# Outers
+from ..base import SimpleExceptionData
 # Inners
 from .base_class import ModeBase
 

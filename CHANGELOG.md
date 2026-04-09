@@ -11,7 +11,7 @@ and this project adheres to Semantic Versioning.
 ### Fixed
 - README: Corrected outdated import paths and library references.
 - Documentation: Fixed example code snippets to align with the current package structure.
-- 
+
 
 ## [0.1.0] - 2026-03-30
 

@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from simplibs.sentinels import UNSET
-# Commons
+# Outers
 from ...utils import extract_caller_info
-from ...core import SimpleExceptionData
+from ...base import SimpleExceptionData
 # Inners
 from ._mixins import PrintCallerInfoMixin, PrintIntroLineMixin, PrintValueWithTypeMixin
 

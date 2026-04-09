@@ -3,7 +3,7 @@ Tests for PrintIntroLineMixin — intro line formatting with and without value_l
 """
 import pytest
 from simplibs.sentinels import UNSET
-from simplibs.exception.core.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
 from simplibs.exception.modes.base_class._mixins.PrintIntroLine import PrintIntroLineMixin
 
 

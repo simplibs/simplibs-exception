@@ -1,5 +1,5 @@
 from simplibs.sentinels import UnsetType
-# Commons
+# Outers
 from ....settings import SimpleExceptionSettings as S
 
 

@@ -2,7 +2,7 @@ from .SimpleExceptionInternalError import SimpleExceptionInternalError
 
 
 _DESIGN_NOTES = """
-# core/_internal_exception
+# base/_internal_exception
 
 ## Contents
 The base internal exception of the library — placed here because it inherits

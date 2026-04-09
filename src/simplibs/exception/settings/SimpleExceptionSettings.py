@@ -1,4 +1,4 @@
-# Commons
+# Outers
 from ..modes.base_class import ModeBase
 from ..modes import PRETTY
 # Inners

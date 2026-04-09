@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-# Commons
-from ....core import SimpleExceptionInternalError
+# Outers
+from ....base import SimpleExceptionInternalError
 
 @dataclass
 class SimpleExceptionModeError(SimpleExceptionInternalError):

@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch
 from simplibs.exception.modes.SIMPLE import SIMPLE
 from simplibs.exception.modes.PRETTY import PRETTY
-from simplibs.exception.core.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
 
 MOCK_CALLER_INFO = {
     "file": "test.py",

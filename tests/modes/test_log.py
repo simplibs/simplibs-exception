@@ -4,7 +4,7 @@ Tests for LOG mode — empty outcome, message outcome, full outcome field order,
 import pytest
 from unittest.mock import patch
 from simplibs.exception.modes.LOG import LOG
-from simplibs.exception.core.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
 
 MOCK_CALLER_INFO = {
     "file": "app.py",

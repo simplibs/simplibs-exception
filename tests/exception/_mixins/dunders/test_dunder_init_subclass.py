@@ -3,7 +3,7 @@ Tests for DunderInitSubclassMixin — valid definitions, errors at class definit
 """
 import pytest
 from simplibs.exception.exception._mixins.dunders.InitSubclass import DunderInitSubclassMixin
-from simplibs.exception.core import SimpleExceptionInternalError
+from simplibs.exception.base import SimpleExceptionInternalError
 
 
 # -----------------------------------------------------------------------------
