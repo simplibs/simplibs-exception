@@ -1,7 +1,7 @@
 # Outers
-from ..base import SimpleExceptionData
+from ..core import SimpleExceptionData
 # Inners
-from .base_class import ModeBase
+from .mode_base import ModeBase
 
 
 # noinspection PyProtectedMember
@@ -13,7 +13,7 @@ class PrettyMessage(ModeBase):
     single_line = "─" * 65
     prefix = "\n     • "
 
-    def _empty_outcome(self, data: SimpleExceptionData, caller_info: dict | None) -> str:
+    def _empty_outcome(self, data: SimpleExceptionData) -> str:
         """
         Output for a call with no data at all.
 
@@ -23,11 +23,11 @@ class PrettyMessage(ModeBase):
         """
         return "\n".join((
             self.double_line,
-            super()._empty_outcome(data, caller_info),
+            super()._empty_outcome(data),
             self.double_line
         ))
 
-    def _message_outcome(self, data: SimpleExceptionData, caller_info: dict | None) -> str:
+    def _message_outcome(self, data: SimpleExceptionData) -> str:
         """
         Output for message-only calls.
 
@@ -36,13 +36,16 @@ class PrettyMessage(ModeBase):
         File: ... | Line: ... | Path: ... | Function: ...
         ═════════════════════════════════════════════════════════════════
         """
+        header = f"⚠️ {data.error_name}: {data.message}"
+        loc = f"\n{self._print_caller_info(data)}" if data._get_location else ""
+
         return "\n".join((
             self.double_line,
-            super()._message_outcome(data, caller_info),
+            f"{header}{loc}",
             self.double_line
         ))
 
-    def _full_outcome(self, data: SimpleExceptionData, caller_info: dict | None) -> str:
+    def _full_outcome(self, data: SimpleExceptionData) -> str:
         """
         Full output with all available fields.
 
@@ -54,7 +57,8 @@ class PrettyMessage(ModeBase):
         Got:       "..." (type)
         Problem:   ...
         Context:   ...
-        File info: File: ... | Line: ... | Path: ... | Function: ...
+        File info: File: ... | Line: ... | Function: ...
+        File path: ...
         ─────────────────────────────────────────────────────────────────
         🔧 How to fix:
              • ...
@@ -63,6 +67,8 @@ class PrettyMessage(ModeBase):
         Intercepted exception (ValueError):
             Expecting value: line 1 column 1 (char 0)
         """
+        # Získání lokace
+        loc = self._print_caller_info(data, as_dict=True) if data._get_location else None
         lines = [
             self.double_line,
             self._print_intro_line(data),
@@ -73,7 +79,9 @@ class PrettyMessage(ModeBase):
             self._print_value_with_type(data, intro="Got:       "),
             f"Problem:   {data.problem}"                         if data.problem else None,
             f"Context:   {data.context}"                         if data.context else None,
-            f"File info: {self._print_caller_info(caller_info)}" if caller_info else None,
+            f"File info: File: {loc['file']} | Line: {loc['line']} | Function: {loc['func']}"
+                                                                 if loc and loc['file'] != "unknown" else None,
+            f"File path: {loc['path']}"                          if loc and loc['path'] != "unknown" else None,
 
             self.single_line                                     if data.how_to_fix else None,
             f"🔧 How to fix:{self.prefix}" +
@@ -97,23 +105,30 @@ _DESIGN_NOTES = """
 The default `SimpleException` mode — a structured output framed with double
 lines that visually separates the exception from surrounding terminal output.
 Designed to reduce cognitive load when reading error output.
-If the separator lines are unwanted, `SIMPLE` mode offers identical output
-without them.
+
+## Location Handling
+The mode retrieves call site information via the `data.caller_info` property. 
+If location reporting is enabled, it is displayed within the `File info` 
+section. If no information is available, the line is omitted.
 
 ## Output scenarios
 
 ### Empty call
+A minimal block containing only the error name and location info.
     ═════════════════════════════════════════════════════════════════
     ⚠️ ERROR: File: ... | Line: ... | Path: ... | Function: ...
     ═════════════════════════════════════════════════════════════════
 
 ### Message only
+A block containing the error name, the free-form message, and location info.
     ═════════════════════════════════════════════════════════════════
     ⚠️ ERROR: Message...
     File: ... | Line: ... | Path: ... | Function: ...
     ═════════════════════════════════════════════════════════════════
 
 ### Full output
+The most comprehensive format including structured fields (Expected, Got, 
+Problem), remediation hints (How to fix), and the origin of the error.
     ═════════════════════════════════════════════════════════════════
     ⚠️ VALIDATION ERROR: value_label
     ═════════════════════════════════════════════════════════════════
@@ -122,7 +137,8 @@ without them.
     Got:       "..." (type)
     Problem:   ...
     Context:   ...
-    File info: File: ... | Line: ... | Path: ... | Function: ...
+    File info: File: ... | Line: ... | Function: ...
+    File path: ...
     ─────────────────────────────────────────────────────────────────
     🔧 How to fix:
          • ...
@@ -132,19 +148,11 @@ without them.
         Expecting value: line 1 column 1 (char 0)
 
 ## Fields and their display conditions
-All fields are optional — they are displayed only when provided (not UNSET).
-The exception is the closing double line, which always appears as the block
-terminator. `intercepted_exception` is shown below the closing line as
-supplementary information about the original caught exception — deliberately
-separated from the main block so it does not add cognitive load in cases
-where it is not relevant.
-
-## caller_info
-Passed as a parameter from `render_message` in `ModeBase` — resolution
-happens centrally there, not inside the mode. If `None` (location disabled
-or not found), the `File info` line is not displayed.
+All fields are optional and are displayed only when they contain data (not UNSET).
+`intercepted_exception` is shown below the closing double line as supplementary 
+information about the original caught exception.
 
 ## Singleton
-The class is used exclusively through the `PRETTY` instance — the mode is
-stateless, so there is no reason to create multiple instances.
+The class is used exclusively through the `PRETTY` instance. It is stateless 
+and designed as a singleton for the entire ecosystem.
 """

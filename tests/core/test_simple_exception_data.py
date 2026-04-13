@@ -1,10 +1,11 @@
 """
 Tests for SimpleExceptionData — structure, default values, and initialization.
+Based on the actual src/simplibs/exception structure.
 """
 import pytest
 from dataclasses import is_dataclass
 from simplibs.sentinels import UNSET
-from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.core.SimpleExceptionData import SimpleExceptionData
 
 
 # -----------------------------------------------------------------------------
@@ -52,6 +53,7 @@ def test_default_values_are_correct():
     # Location Info
     assert data._get_location is True
     assert data._skip_locations == ()
+    assert data._cached_caller_info is UNSET
 
     # Output Mode
     assert data._oneline is False
@@ -81,6 +83,13 @@ def test_custom_values_are_assigned():
 
 def test_internal_attributes_start_with_underscore():
     """Computed/internal attributes must follow the underscore naming convention."""
-    for attr in ["_intercepted_exception", "_get_location", "_skip_locations", "_oneline"]:
-        assert hasattr(SimpleExceptionData, attr)
-        assert attr.startswith("_")
+    internal_attrs = [
+        "_intercepted_exception",
+        "_get_location",
+        "_skip_locations",
+        "_cached_caller_info",
+        "_oneline"
+    ]
+    for attr in internal_attrs:
+        assert hasattr(SimpleExceptionData, attr), f"Missing attribute: {attr}"
+        assert attr.startswith("_"), f"Attribute {attr} should start with underscore"

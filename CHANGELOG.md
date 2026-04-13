@@ -2,28 +2,109 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on Keep a Changelog,
-and this project adheres to Semantic Versioning.
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
 
+---
+
+## [0.2.0] - 2026-04-11
+
+### 🔄 Changed
+
+- **Core Architecture**: Unified rendering workflow by centralizing logic into the data layer (`SimpleExceptionData`)
+- **Output Modes API**: All output modes (`PRETTY`, `SIMPLE`, `LOG`, `ONELINE`) now accept only `data: SimpleExceptionData` parameter
+- **Location Resolution**: Decoupled manual `caller_info` dictionary passing; call stack introspection now handled lazily via `SimpleExceptionData.caller_info`
+- **Mixin Composition**: Refactored `ModeBase` to use explicit mixin hierarchy (`RenderMessageMixin`, `PrintCallerInfoMixin`, `PrintIntroLineMixin`, `PrintValueWithTypeMixin`)
+- **Internal Structure**: Reorganized core modules:
+  - Separated workflow logic into dedicated mixins for better separation of concerns
+  - Created `_data_mixin` layer for data-centric operations
+  - Improved code reusability across the ecosystem
+
+### ✨ Added
+
+- **New Tools in `tools/`**:
+  - `raise_with_location_offset()`: Function for raising exceptions with custom stack depth adjustment
+  - `raise_location_offset`: Decorator for elegant stack offset handling in helper functions
+  - `decorators/` subpackage for composable decorator utilities
+- **Smart Value Truncation**: Advanced truncation in `PrintValueWithTypeMixin` with character count indication
+- **Enhanced Data Layer**: `SimpleExceptionData` now includes lazy-loaded `caller_info` property
+- **New Setting**: `DEFAULT_VALUE_TRUNCATION_LENGTH` for controlling max value display length
+
+### 🐛 Fixed
+
+- **Consistency**: Standardized all helper method signatures across mixins
+- **Documentation**: Updated all Design Notes to reflect current architecture (removed historical notes)
+- **Import Structure**: Clarified lazy import patterns to prevent circular dependencies
+- **Type Hints**: Enhanced type annotations across the codebase
+
+### 📋 Improved
+
+- **Code Organization**: Flattened public API while maintaining deep modularity internally
+- **Testability**: Each mixin is now independently testable
+- **Readability**: Design notes in each module now match actual implementation exactly
+
+---
 
 ## [0.1.1] - 2026-03-30
 
-### Fixed
-- README: Corrected outdated import paths and library references.
-- Documentation: Fixed example code snippets to align with the current package structure.
+### 🐛 Fixed
 
+- **README**: Corrected outdated import paths and library references
+- **Documentation**: Updated example code snippets to match current package structure
+- **Type Hints**: Fixed incomplete type annotations in utility functions
+
+---
 
 ## [0.1.0] - 2026-03-30
 
-### Added
-- `SimpleException` — structured exception with diagnostic output
-- Support for `message`, `value`, `value_label`, `expected`, `problem`,
-  `context`, `how_to_fix`, `error_name`, `exception`, `get_location`,
-  `skip_locations`, and `oneline` parameters
-- Four output modes: `PRETTY`, `SIMPLE`, `ONELINE`, `LOG`
+### ✨ Added
+
+#### Core Exception Class
+- `SimpleException` — structured exception with diagnostic output and rich formatting
+
+#### Parameters & Customization
+- Support for `message`, `value`, `value_label`, `expected`, `problem`, `context`, `how_to_fix`
+- Support for `error_name`, `exception`, `get_location`, `skip_locations`, `oneline`
+- Custom exception subclasses with inherited defaults
+- Runtime validation of subclass attributes
+
+#### Output Modes
+- `PRETTY` — framed structured output (default)
+- `SIMPLE` — plain text without decorative lines
+- `ONELINE` — compact single-line format
+- `LOG` — machine-readable key=value format
+- `ModeBase` — abstract base for custom modes
+
+#### Configuration & Settings
 - `SimpleExceptionSettings` — global configuration for the entire ecosystem
-- Custom mode support via `ModeBase`
-- Serialisation via `to_dict()`, `to_json()`, `to_debug_dict()`
-- Utility tools: `bool_or_exception`, `extract_caller_info`
-- Sentinel values via `simplibs-sentinels` dependency
+- Settings validation with clear error messages
+- Support for mode switching and location reporting control
+
+#### Serialisation
+- `to_dict()` — public attributes as dictionary
+- `to_json()` — JSON string representation
+- `to_debug_dict()` — complete internal state for debugging
+
+#### Developer Tools
+- `bool_or_exception()` — boolean result to exception conversion
+- `extract_caller_info()` — independent call stack introspection
+- Location tracking and stack depth control
+
+#### Quality Assurance
 - Full test coverage (~281 tests)
+- Unit and integration tests
+- Living documentation via test examples
+
+#### Dependencies
+- `simplibs-sentinels` — sentinel values (`UNSET`) for distinguishing unset from `None`
+
+---
+
+## Legend
+
+- 🔄 **Changed** — modifications to existing functionality
+- ✨ **Added** — new features and components
+- 🐛 **Fixed** — bug fixes
+- 📋 **Improved** — enhancements to existing features
+- ⚠️ **Deprecated** — deprecated functionality (not used yet in this project)
+- 🗑️ **Removed** — removed functionality (not used yet in this project)

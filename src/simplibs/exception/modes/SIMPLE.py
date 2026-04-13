@@ -1,14 +1,14 @@
 # Outers
-from ..base import SimpleExceptionData
+from ..core import SimpleExceptionData
 # Inners
-from .base_class import ModeBase
+from .mode_base import ModeBase
 
 
 # noinspection PyProtectedMember
 class SimpleMessage(ModeBase):
     """Output without decorative lines — plain text."""
 
-    def _full_outcome(self, data: SimpleExceptionData, caller_info: dict | None) -> str:
+    def _full_outcome(self, data: SimpleExceptionData) -> str:
         """
         Full output with all available fields.
 
@@ -18,7 +18,8 @@ class SimpleMessage(ModeBase):
         Got:       "..." (type)
         Problem:   ...
         Context:   ...
-        File info: File: ... | Line: ... | Path: ... | Function: ...
+        File info: File: ... | Line: ... | Function: ...
+        File path: ...
         🔧 How to fix:
              • ...
              • ...
@@ -26,20 +27,25 @@ class SimpleMessage(ModeBase):
             Expecting value: line 1 column 1 (char 0)
         """
         prefix = "\n     • "
+        loc = self._print_caller_info(data, as_dict=True) if data._get_location else None
         lines = [
             self._print_intro_line(data),
 
-            f"Message:   {data.message}"                             if data.message else None,
-            f"Expected:  {data.expected}"                            if data.expected else None,
+            f"Message:   {data.message}" if data.message else None,
+            f"Expected:  {data.expected}" if data.expected else None,
             self._print_value_with_type(data, intro="Got:       "),
-            f"Problem:   {data.problem}"                             if data.problem else None,
-            f"Context:   {data.context}"                             if data.context else None,
-            f"File info: {self._print_caller_info(caller_info)}"     if caller_info else None,
+            f"Problem:   {data.problem}" if data.problem else None,
+            f"Context:   {data.context}" if data.context else None,
+
+            # Rozdělené info o souboru
+            f"File info: File: {loc['file']} | Line: {loc['line']} | Function: {loc['func']}"
+            if loc and loc['file'] != "unknown" else None,
+            f"File path: {loc['path']}" if loc and loc['path'] != "unknown" else None,
 
             f"🔧 How to fix:{prefix}" +
-            prefix.join(data.how_to_fix)                             if data.how_to_fix else None,
+            prefix.join(data.how_to_fix) if data.how_to_fix else None,
             f"Intercepted exception ({data.exception.__name__}):\n"
-            f"    {data._intercepted_exception}"                     if data._intercepted_exception else None,
+            f"    {data._intercepted_exception}" if data._intercepted_exception else None,
         ]
         return "\n".join(line for line in lines if line)
 
@@ -75,7 +81,8 @@ Inherited from `ModeBase` — intentionally not overridden.
     Got:       "..." (type)
     Problem:   ...
     Context:   ...
-    File info: File: ... | Line: ... | Path: ... | Function: ...
+    File info: File: ... | Line: ... | Function: ...
+    File path: ...
     🔧 How to fix:
          • ...
          • ...

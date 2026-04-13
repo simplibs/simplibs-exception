@@ -2,7 +2,7 @@ from .PRETTY import PRETTY, PrettyMessage
 from .SIMPLE import SIMPLE, SimpleMessage
 from .ONELINE import ONELINE, OnelineMessage
 from .LOG import LOG, LogMessage
-from .base_class import ModeBase
+from .mode_base import ModeBase
 
 
 _DESIGN_NOTES = """

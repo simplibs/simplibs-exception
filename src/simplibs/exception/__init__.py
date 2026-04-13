@@ -1,41 +1,67 @@
-from .exception import SimpleException
-from .utils import bool_or_exception, extract_caller_info
-from .modes import PRETTY, SIMPLE, ONELINE, LOG, ModeBase
-from .settings import SimpleExceptionSettings, SimpleExceptionSettingsError
-
+from .SimpleException import SimpleException
+from .core import SimpleExceptionSettings, SimpleExceptionData
+from .modes import (
+    PRETTY,
+    SIMPLE,
+    ONELINE,
+    LOG,
+    ModeBase
+)
+from .tools import (
+    bool_or_exception,
+    raise_with_location_offset
+)
+from .tools.decorators import raise_location_offset
 
 __all__ = [
     # Core class
     "SimpleException",
-    # Utils
-    "bool_or_exception",
-    "extract_caller_info",
+    "SimpleExceptionSettings",
+    "SimpleExceptionData",
     # Modes
     "PRETTY",
     "SIMPLE",
     "ONELINE",
     "LOG",
     "ModeBase",
-    # Settings
-    "SimpleExceptionSettings",
-    "SimpleExceptionSettingsError",
+    # Tools
+    "bool_or_exception",
+    "raise_with_location_offset",
+    "raise_location_offset",
 ]
 
-
 _DESIGN_NOTES = """
-# simple_exception
+# Package Entry Point
 
-## Public API
-| Name                           | Description                                                       |
-|--------------------------------|-------------------------------------------------------------------|
-| `SimpleException`              | Core class — the foundation for all exceptions in the ecosystem   |
-| `bool_or_exception`            | Shortcut for conditional exception raising                        |
-| `extract_caller_info`          | Utility for retrieving call site information from the stack       |
-| `PRETTY`                       | Default mode — structured output with separator lines             |
-| `SIMPLE`                       | Plain text output without decorations                             |
-| `ONELINE`                      | Compact single-line output                                        |
-| `LOG`                          | Key=value format for log parsers                                  |
-| `ModeBase`                     | Base class for custom modes                                       |
-| `SimpleExceptionSettings`      | Central configuration of the library                              |
-| `SimpleExceptionSettingsError` | Exception for errors when changing settings                       |
+## Purpose
+This module defines the public API for the `SimpleException` library. It 
+exposes the primary exception class, configuration settings, and output modes 
+while keeping internal implementation details (like mixins and private core 
+logic) hidden from the end user.
+
+## Exported Components
+
+### 1. The Core
+- **SimpleException**: The main exception class to be inherited or raised directly.
+- **SimpleExceptionSettings**: Global configuration (colors, default limits, etc.).
+- **SimpleExceptionData**: Data container for exception state, useful for typing.
+
+### 2. Output Modes (Singletons)
+Pre-configured instances that define how the exception message is rendered:
+- **PRETTY**: Default framed output for terminal.
+- **SIMPLE**: Plain text output without frames.
+- **ONELINE**: Compact single-line output.
+- **LOG**: Structured key=value format for machine processing.
+- **ModeBase**: Abstract base for creating custom output formats.
+
+### 3. Developer Tools
+Utilities for handling call stack manipulation and result-based exceptions:
+- **bool_or_exception**: Converts boolean results into raised exceptions.
+- **raise_location_offset**: Decorator to shift the reported error location.
+- **raise_with_location_offset**: Function for manual location shifting.
+
+## Architecture Pattern
+The library follows a "Flat API" pattern where all essential tools are 
+accessible from the top-level package, while the source code remains 
+highly modular and categorized in subdirectories.
 """

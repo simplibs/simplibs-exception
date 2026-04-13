@@ -2,44 +2,59 @@
 Tests for SIMPLE mode — no decorative lines, field content, field order, and parity with PRETTY.
 """
 import pytest
-from unittest.mock import patch
+from unittest.mock import MagicMock
 from simplibs.exception.modes.SIMPLE import SIMPLE
 from simplibs.exception.modes.PRETTY import PRETTY
-from simplibs.exception.base.data.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.core.SimpleExceptionData import SimpleExceptionData
+from simplibs.sentinels import UNSET
 
-MOCK_CALLER_INFO = {
-    "file": "test.py",
-    "line": 1,
-    "full_path": "path/test.py",
-    "function": "func"
-}
+@pytest.fixture
+def simple_data():
+    """Provides a Mock of SimpleExceptionData configured for SIMPLE mode tests."""
+    data = MagicMock(spec=SimpleExceptionData)
+    data.error_name = "SIMPLE_TEST"
+    data.message = UNSET
+    data.value_label = UNSET
+    data.value = UNSET
+    data.expected = UNSET
+    data.problem = UNSET
+    data.context = UNSET
+    data.how_to_fix = UNSET
+    data._get_location = True
+    data._intercepted_exception = UNSET
+    data.exception = None
+    data.caller_info = {
+        "file": "test.py",
+        "line": 1,
+        "full_path": "path/test.py",
+        "function": "func"
+    }
+    return data
 
 
 # -----------------------------------------------------------------------------
 # Critical properties
 # -----------------------------------------------------------------------------
 
-def test_no_decorative_lines_in_any_output():
+def test_no_decorative_lines_in_any_output(simple_data):
     """SIMPLE must never contain decorative lines ═ or ─."""
-    data = SimpleExceptionData(
-        error_name="FULL_SIMPLE",
-        problem="Network timeout",
-        how_to_fix=("Check connection",)
-    )
-    data._get_location = False
+    simple_data.error_name = "FULL_SIMPLE"
+    simple_data.problem = "Network timeout"
+    simple_data.how_to_fix = ("Check connection",)
+    simple_data._get_location = False
 
-    output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False)
 
     assert "═" not in output
     assert "─" not in output
 
 
-def test_no_none_in_output():
+def test_no_none_in_output(simple_data):
     """The output must not contain the string 'None' anywhere — UNSET fields are skipped."""
-    data = SimpleExceptionData(problem="Only problem")
-    data._get_location = False
+    simple_data.problem = "Only problem"
+    simple_data._get_location = False
 
-    output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False)
 
     assert "None" not in output
 
@@ -48,22 +63,21 @@ def test_no_none_in_output():
 # _empty_outcome (inherited from ModeBase)
 # -----------------------------------------------------------------------------
 
-def test_empty_outcome_starts_with_error_name():
+def test_empty_outcome_starts_with_error_name(simple_data):
     """The empty output must start with the error name without any decoration."""
-    data = SimpleExceptionData(error_name="SIMPLE_TEST")
-    data._get_location = False
+    simple_data.error_name = "SIMPLE_TEST"
+    simple_data._get_location = False
 
-    output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False)
 
-    assert output.startswith("⚠️ SIMPLE_TEST:")
+    assert output.startswith("⚠️ SIMPLE_TEST")
 
 
-def test_empty_outcome_with_caller_info():
+def test_empty_outcome_with_caller_info(simple_data):
     """Caller info must be included in the empty output when available."""
-    data = SimpleExceptionData(error_name="SIMPLE_TEST")
+    simple_data.error_name = "SIMPLE_TEST"
 
-    with patch("simplibs.exception.modes.base_class.ModeBase.extract_caller_info", return_value=MOCK_CALLER_INFO):
-        output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False)
 
     assert "File: test.py" in output
     assert "Line: 1" in output
@@ -73,22 +87,20 @@ def test_empty_outcome_with_caller_info():
 # _full_outcome
 # -----------------------------------------------------------------------------
 
-def test_full_outcome_contains_all_fields():
+def test_full_outcome_contains_all_fields(simple_data):
     """The full output must contain all provided fields."""
-    data = SimpleExceptionData(
-        error_name="FULL_SIMPLE",
-        message="a message",
-        expected="str",
-        value=42,
-        problem="Network timeout",
-        context="inside a loop",
-        how_to_fix=("Check connection",),
-    )
-    data._get_location = False
+    simple_data.error_name = "FULL_SIMPLE"
+    simple_data.message = "a message"
+    simple_data.expected = "str"
+    simple_data.value = 42
+    simple_data.problem = "Network timeout"
+    simple_data.context = "inside a loop"
+    simple_data.how_to_fix = ("Check connection",)
+    simple_data._get_location = False
 
-    output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False)
 
-    assert "⚠️ FULL_SIMPLE:" in output
+    assert "⚠️ FULL_SIMPLE" in output
     assert "Message:   a message" in output
     assert "Expected:  str" in output
     assert "Got:       42 (int)" in output
@@ -98,19 +110,16 @@ def test_full_outcome_contains_all_fields():
     assert "• Check connection" in output
 
 
-def test_full_outcome_field_order():
+def test_full_outcome_field_order(simple_data):
     """Fields must appear in order: Message, Expected, Got, Problem, Context."""
-    data = SimpleExceptionData(
-        error_name="ORDER",
-        message="a message",
-        expected="str",
-        value=42,
-        problem="wrong type",
-        context="context",
-    )
-    data._get_location = False
+    simple_data.message = "a message"
+    simple_data.expected = "str"
+    simple_data.value = 42
+    simple_data.problem = "wrong type"
+    simple_data.context = "context"
+    simple_data._get_location = False
 
-    output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False)
 
     assert output.index("Message:") < output.index("Expected:")
     assert output.index("Expected:") < output.index("Got:")
@@ -118,50 +127,52 @@ def test_full_outcome_field_order():
     assert output.index("Problem:") < output.index("Context:")
 
 
-def test_full_outcome_with_caller_info():
-    """The File info line must be shown when caller_info is available."""
-    data = SimpleExceptionData(problem="Some problem")
+def test_full_outcome_location_split_into_two_lines(simple_data):
+    """The location info must be split into 'File info' and 'File path' lines."""
+    simple_data.problem = "Some problem"
 
-    with patch("simplibs.exception.modes.base_class.ModeBase.extract_caller_info", return_value=MOCK_CALLER_INFO):
-        output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False)
 
-    assert "File info:" in output
-    assert "File: test.py" in output
+    assert "File info: File: test.py | Line: 1 | Function: func" in output
+    assert "File path: path/test.py" in output
+    assert output.index("File info:") < output.index("File path:")
 
 
-def test_full_outcome_without_caller_info():
-    """The File info line must not be shown when caller_info is None."""
-    data = SimpleExceptionData(problem="Some problem")
-    data._get_location = False
+def test_full_outcome_without_caller_info(simple_data):
+    """The File info and path lines must not be shown when location is disabled."""
+    simple_data.problem = "Some problem"
+    simple_data._get_location = False
 
-    output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False)
 
     assert "File info:" not in output
+    assert "File path:" not in output
 
 
 # -----------------------------------------------------------------------------
 # intercepted_exception
 # -----------------------------------------------------------------------------
 
-def test_intercepted_exception_shown_as_last_line():
+def test_intercepted_exception_shown_as_last_line(simple_data):
     """The intercepted exception must be shown as the last part of the output."""
-    data = SimpleExceptionData(problem="Some problem")
-    data._get_location = False
-    data._intercepted_exception = "Expecting value: line 1 column 1"
-    data.exception = ValueError
+    simple_data.problem = "Some problem"
+    simple_data._get_location = False
+    simple_data._intercepted_exception = "Expecting value: line 1 column 1"
+    simple_data.exception = ValueError
 
-    output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False).strip()
 
     assert "Intercepted exception (ValueError):" in output
     assert output.endswith("    Expecting value: line 1 column 1")
 
 
-def test_intercepted_exception_not_shown_when_unset():
+def test_intercepted_exception_not_shown_when_unset(simple_data):
     """The intercepted exception must not appear when it is not set."""
-    data = SimpleExceptionData(problem="Some problem")
-    data._get_location = False
+    simple_data.problem = "Some problem"
+    simple_data._get_location = False
+    simple_data._intercepted_exception = UNSET
 
-    output = SIMPLE(data, validate=False)
+    output = SIMPLE(simple_data, validate=False)
 
     assert "Intercepted exception" not in output
 
@@ -170,17 +181,15 @@ def test_intercepted_exception_not_shown_when_unset():
 # Relationship to PRETTY
 # -----------------------------------------------------------------------------
 
-def test_simple_vs_pretty_same_content():
+def test_simple_vs_pretty_same_content(simple_data):
     """SIMPLE and PRETTY must produce identical content — differing only in decorative lines."""
-    data = SimpleExceptionData(
-        error_name="COMPARE",
-        problem="Some problem",
-        how_to_fix=("Fix it",)
-    )
-    data._get_location = False
+    simple_data.error_name = "COMPARE"
+    simple_data.problem = "Some problem"
+    simple_data.how_to_fix = ("Fix it",)
+    simple_data._get_location = False
 
-    out_simple = SIMPLE(data, validate=False)
-    out_pretty = PRETTY(data, validate=False)
+    out_simple = SIMPLE(simple_data, validate=False)
+    out_pretty = PRETTY(simple_data, validate=False)
 
     cleaned_pretty = "\n".join(
         line for line in out_pretty.split("\n")
