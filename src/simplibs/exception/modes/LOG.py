@@ -1,53 +1,64 @@
-from simplibs.sentinels import UNSET
-# Outers
-from ..core import SimpleExceptionData
+from typing import TYPE_CHECKING
 # Inners
-from .mode_base import ModeBase
+from .base_class import ModeBase
+from .printers import (
+    print_message,
+    print_intro,
+    print_expected,
+    print_value_with_type,
+    print_problem,
+    print_context,
+    print_file_info,
+    print_file_path
+)
+# Annotations
+if TYPE_CHECKING:
+    from ..protocols import ModeBaseProtocol
+    from ..protocols import SimpleExceptionDataProtocol
 
 
-# noinspection PyProtectedMember
 class LogMessage(ModeBase):
-    """Structured key=value output for log parsers."""
+    """Machine-readable key-value output adhering to the logfmt specification."""
 
-    def _empty_outcome(self, data: SimpleExceptionData) -> str:
+    def _render(
+        self: "ModeBaseProtocol", data: "SimpleExceptionDataProtocol"
+    ) -> str:
         """
-        Output for a call with no data at all.
-        Format: error=ERROR file='...' line=...
-        """
-        loc = self._print_caller_info(data, as_dict=True)
-        return f"error={data.error_name} file={loc['file']!r} line={loc['line']}"
+        Dynamically adapts and flattens all available exception fields into
+        a single space-separated logfmt string.
 
-    def _message_outcome(self, data: SimpleExceptionData) -> str:
-        """
-        Output for message-only calls.
-        Format: error=ERROR message='...' file='...' line=...
-        """
-        loc = self._print_caller_info(data, as_dict=True)
-        return (
-            f"error={data.error_name} "
-            f"message={data.message!r} "
-            f"file={loc['file']!r} line={loc['line']}"
-        )
+        ## Full output preview:
+        error=ERROR message='...' label='...' value='...' expected='...' problem='...' context='...' file='filename.py' line=42 how_to_fix='...'
 
-    def _full_outcome(self, data: SimpleExceptionData) -> str:
+        ## Field order
+        1. `error_name` + `label` — primary identification via `_print_intro_line`
+        2. `message` — free-form message
+        3. `expected` — description of the desired state
+        4. `Got` — the inspected value with its type
+        5. `problem` — description of the actual error
+        6. `context` — additional situational information
+        7. Location — file, line, and function info
         """
-        Full output with all available fields.
-        Format: error=ERROR message='...' value='...' file='...' line=...
-        """
-        loc = self._print_caller_info(data, as_dict=True)
+        location = data.caller_info
 
-        parts = [
-            f"error={data.error_name}",
-            f"message={data.message!r}" if data.message else None,
-            f"value_label={data.value_label!r}" if data.value_label else None,
-            f"value={self._print_value_with_type(data)!r}" if data.value is not UNSET else None,
-            f"expected={data.expected!r}" if data.expected else None,
-            f"problem={data.problem!r}" if data.problem else None,
-            f"context={data.context!r}" if data.context else None,
-            f"file={loc['file']!r} line={loc['line']}" if data.caller_info else None,
-            f"how_to_fix={' | '.join(data.how_to_fix)!r}" if data.how_to_fix else None,
+        lines = [
+            # 1. Primary identification header (error=... or error=... label=...)
+            print_intro(data.error_name, data.label, _log_mode=True),
+
+            # 2. Structured core attributes (Printers handle safe !r quoting natively)
+            print_message(data.message, _log_mode=True),
+            print_expected(data.expected, _log_mode=True),
+            print_value_with_type(data.value, _log_mode=True),
+            print_problem(data.problem, _log_mode=True),
+            print_context(data.context, _log_mode=True),
+
+            # 3. Location tracing metadata
+            print_file_info(location, _log_mode=True),
+            print_file_path(location, _log_mode=True),
         ]
-        return " ".join(part for part in parts if part)
+
+        # Join only active tokens into a perfectly flat, single-line log stream token row
+        return " ".join(line for line in lines if line)
 
 
 # Singleton mode instance
@@ -58,36 +69,52 @@ _DESIGN_NOTES = """
 # LOG
 
 ## Purpose
-Output in `key=value` format (logfmt) — designed for machine processing by
-log parsers. Each field is explicitly named and space-separated.
+A machine-readable execution mode that formats all active exception properties 
+into standard `key=value` serialization (logfmt). It is explicitly engineered 
+for production container injection streams, centralized log aggregators (Elasticsearch, 
+Datadog, AWS CloudWatch), and index-heavy routing engines.
 
-## Location Handling
-The mode retrieves location data via the `data.caller_info` property. It uses 
-the helper method `_print_caller_info(data, as_dict=True)` to obtain a 
-dictionary, ensuring that the machine-readable format (`file=... line=...`) 
-remains consistent regardless of the global location settings.
+## Token Serialization Integrity
+By delegating execution to low-level printers with `_log_mode=True`, the formatter 
+guarantees that unsafe string components (containing spaces, quotes, or control characters) 
+are automatically sanitized via Python's native `repr()` wrapper (`!r`). This ensures that 
+downstream token parsers read each property as a single bounded value without line splitting.
 
-## Output scenarios
+## Output Scenarios
 
-### Empty call
-    error=ERROR file='filename.py' line=42
+### 1. Empty Call (Absolute Minimum Data)
+When called with zero optional parameters, it maps down to structural tracing data:
+```text
+error='CORE_ERROR' file='main.py' line=12 function='run_pipeline' path='/usr/app/src/main.py'
 
-### Message only
-    error=ERROR message='...' file='filename.py' line=42
+```
 
-### Full output
-    error=ERROR message='...' value_label='...' value='...' expected='...' problem='...' context='...' file='filename.py' line=42 how_to_fix='...'
+### 2. Message Only Pattern
 
-## Field order
-1. `error` — the error name
-2. `message` — free-form message
-3. `value_label` + `value` — what was being inspected
-4. `expected` + `problem` + `context` — error details
-5. `file` + `line` — location
-6. `how_to_fix` — remediation
+```text
+error='DATABASE_ERROR' message='Failed to establish a pool connection to the replica.' file='db.py' line=84 function='connect' path='/usr/app/src/db.py'
 
-## Constraints
-- Multi-line fields (like `intercepted_exception`) are excluded to prevent 
-  breaking the single-line integrity required by log processors.
-- If `data.caller_info` is missing, location fields are omitted from the string.
+```
+
+### 3. Full Structured Layout
+
+When fully populated, all complex types are flattened and space-separated chronologically:
+
+```text
+error='VALIDATION_ERROR' label='Request Payload Validation Failed' message='The submitted account configuration contains illegal data blocks.' expected='An active user payload containing a valid enterprise email layout.' value="{'email': 'bad_mail', 'tier': 'premium'}" type='dict' problem='The provided email string does not contain an \x27@\x27 sign symbol. Domain resolution check failed for host \x27bad_mail\x27.' context='Client IP: 192.168.1.55 Request ID: req-9942a-x' file='validators.py' line=204 function='validate_email' path='/usr/app/src/validators.py'
+
+```
+
+## Structural Constraints & Pruning Choices
+
+* **Strictest Single-Line Policy**: Newline characters are forbidden.
+* `how_to_fix` checklists are **omitted entirely**. Remediation paths are descriptive human instructions, which would only bloat log indexes.
+* `intercepted_exception` trace blocks are **pruned down to their class names** inside `print_intercepted_exception` to prevent dirty multi-line stack trace drops into a clean stdout pool.
+* If `data.caller_info` is unallocated, location keys (`file`, `line`, `function`, `path`) completely dissolve from the generated row.
+
+## Singleton Architecture
+
+The class is completely stateless. It is instantiated exactly once as a module-level
+immutable singleton (`LOG`). All components utilize this single reference to prevent allocation overhead.
 """
+

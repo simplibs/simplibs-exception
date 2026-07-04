@@ -1,63 +1,49 @@
-# Outers
-from ..core import SimpleExceptionData
+from typing import TYPE_CHECKING
+from simplibs.sentinels import UNSET
 # Inners
-from .mode_base import ModeBase
+from .base_class import ModeBase
+from .printers import (
+    DOUBLE_LINE,
+    SINGLE_LINE,
+    print_message,
+    print_intro,
+    print_expected,
+    print_value_with_type,
+    print_problem,
+    print_context,
+    print_how_to_fix,
+    print_intercepted_exception,
+    print_file_info,
+    print_file_path
+)
+# Annotations
+if TYPE_CHECKING:
+    from ..protocols import ModeBaseProtocol
+    from ..protocols import SimpleExceptionDataProtocol
 
 
-# noinspection PyProtectedMember
 class PrettyMessage(ModeBase):
-    """Structured output framed with double lines — the default mode."""
+    """Structured output framed with double lines — the default presentation mode."""
 
-    # Decorative separators
-    double_line = "═" * 65
-    single_line = "─" * 65
-    prefix = "\n     • "
-
-    def _empty_outcome(self, data: SimpleExceptionData) -> str:
+    def _render(
+        self: "ModeBaseProtocol", data: "SimpleExceptionDataProtocol"
+    ) -> str:
         """
-        Output for a call with no data at all.
+        Dynamically adapts and renders the exception into a beautiful framed output.
+        Handles empty, message-only, and fully structured data seamlessly.
 
+        ## Full output preview:
         ═════════════════════════════════════════════════════════════════
-        ⚠️ ERROR: File: ... | Line: ... | Path: ... | Function: ...
-        ═════════════════════════════════════════════════════════════════
-        """
-        return "\n".join((
-            self.double_line,
-            super()._empty_outcome(data),
-            self.double_line
-        ))
-
-    def _message_outcome(self, data: SimpleExceptionData) -> str:
-        """
-        Output for message-only calls.
-
-        ═════════════════════════════════════════════════════════════════
-        ⚠️ ERROR: Message...
-        File: ... | Line: ... | Path: ... | Function: ...
-        ═════════════════════════════════════════════════════════════════
-        """
-        header = f"⚠️ {data.error_name}: {data.message}"
-        loc = f"\n{self._print_caller_info(data)}" if data._get_location else ""
-
-        return "\n".join((
-            self.double_line,
-            f"{header}{loc}",
-            self.double_line
-        ))
-
-    def _full_outcome(self, data: SimpleExceptionData) -> str:
-        """
-        Full output with all available fields.
-
-        ═════════════════════════════════════════════════════════════════
-        ⚠️ VALIDATION ERROR: value_label
+        ⚠️ VALIDATION ERROR: label
         ═════════════════════════════════════════════════════════════════
         Message:   ...
         Expected:  ...
         Got:       "..." (type)
         Problem:   ...
+                   ...
         Context:   ...
-        File info: File: ... | Line: ... | Function: ...
+                   ...
+        File info: ... | Line: ... | Function: ...
         File path: ...
         ─────────────────────────────────────────────────────────────────
         🔧 How to fix:
@@ -67,36 +53,129 @@ class PrettyMessage(ModeBase):
         Intercepted exception (ValueError):
             Expecting value: line 1 column 1 (char 0)
         """
-        # Získání lokace
-        loc = self._print_caller_info(data, as_dict=True) if data._get_location else None
+        location = data.caller_info
+
+        # Check if we have any granular structured data for the inner body block
+        has_details = any(
+            [
+                data.expected,
+                data.value is not UNSET,
+                data.problem,
+                data.context,
+            ]
+        )
+
         lines = [
-            self.double_line,
-            self._print_intro_line(data),
-            self.double_line,
 
-            f"Message:   {data.message}"                         if data.message else None,
-            f"Expected:  {data.expected}"                        if data.expected else None,
-            self._print_value_with_type(data, intro="Got:       "),
-            f"Problem:   {data.problem}"                         if data.problem else None,
-            f"Context:   {data.context}"                         if data.context else None,
-            f"File info: File: {loc['file']} | Line: {loc['line']} | Function: {loc['func']}"
-                                                                 if loc and loc['file'] != "unknown" else None,
-            f"File path: {loc['path']}"                          if loc and loc['path'] != "unknown" else None,
+            # 1. Primary identification header (⚠️ ERROR_NAME: label)
+            DOUBLE_LINE,
+            print_intro(data.error_name, data.label),
 
-            self.single_line                                     if data.how_to_fix else None,
-            f"🔧 How to fix:{self.prefix}" +
-            self.prefix.join(data.how_to_fix)                    if data.how_to_fix else None,
-            self.double_line,
+            # 2. Render secondary line ONLY if granular structure details follow
+            DOUBLE_LINE if has_details else None,
 
-            f"Intercepted exception ({data.exception.__name__}):\n"
-            f"    {data._intercepted_exception}"                 if data._intercepted_exception else None,
+            # 3. Core body section (Printers return None internally if fields are omitted)
+            print_message(data.message),
+            print_expected(data.expected),
+            print_value_with_type(data.value),
+            print_problem(data.problem),
+            print_context(data.context),
+
+            # 4. Shared location metadata components
+            print_file_info(location),
+            print_file_path(location),
+
+            # 5. Actionable remediation block (How to fix)
+            SINGLE_LINE if data.how_to_fix else None,
+            print_how_to_fix(data.how_to_fix),
+            DOUBLE_LINE,
+
+            # 6. Captured underlying exception block at the absolute bottom
+            print_intercepted_exception(data.exception),
         ]
+
         return "\n".join(line for line in lines if line)
 
 
 # Singleton mode instance
 PRETTY = PrettyMessage()
 
+_DESIGN_NOTES = """
+# PRETTY
+
+## Purpose
+The default execution mode for `SimpleException`. It renders a rich, highly structured 
+terminal output framed within explicit graphical margins. It is optimized for local 
+development environments to minimize cognitive load during debugging cycles.
+
+## Adaptive Layout Composition
+The renderer is fully elastic and polymorphic. It evaluates the presence of data fields 
+dynamically, completely omitting missing properties and adjusting inner layout dividers 
+automatically. It guarantees that nothing looks broken or empty, regardless of the usage pattern.
+
+## Output Scenarios
+
+### 1. Empty Call (Absolute Minimum Data)
+When no custom message or properties are passed, the mode isolates and prints only 
+the primary error identifier header and the physical file location footprint:
+```text
+═════════════════════════════════════════════════════════════════
+⚠️ CORE_ERROR
+File info: main.py | line: 12 | function: run_pipeline
+File path: /usr/app/src/main.py
+═════════════════════════════════════════════════════════════════
+
+```
+
+### 2. Message Only Pattern
+
+If only a free-form description text string is provided, the renderer injects it
+directly above the location footprint without rendering the secondary body frame line:
+
+```text
+═════════════════════════════════════════════════════════════════
+⚠️ DATABASE_ERROR
+Message:   Failed to establish a pool connection to the replica.
+File info: db.py | line: 84 | function: connect
+File path: /usr/app/src/db.py
+═════════════════════════════════════════════════════════════════
+
+```
+
+### 3. Full Structured Layout
+
+When fully populated with comparison assertions, multi-line contextual diagnostics,
+and mitigation instructions, it builds a full-spectrum report panel:
+
+```text
+═════════════════════════════════════════════════════════════════
+⚠️ VALIDATION_ERROR: Request Payload Validation Failed
+═════════════════════════════════════════════════════════════════
+Message:   The submitted account configuration contains illegal data blocks.
+Expected:  An active user payload containing a valid enterprise email layout.
+Got:       {'email': 'bad_mail', 'tier': 'premium'} (dict)
+Problem:   The provided email string does not contain an '@' sign symbol.
+           Domain resolution check failed for host 'bad_mail'.
+Context:   Client IP: 192.168.1.55
+           Request ID: req-9942a-x
+File info: validators.py | line: 204 | function: validate_email
+File path: /usr/app/src/validators.py
+─────────────────────────────────────────────────────────────────
+🔧 How to fix:
+     • Ensure the input field enforces front-end email format filtering.
+     • Check the downstream gateway router payload parser encoding schema.
+═════════════════════════════════════════════════════════════════
+Intercepted exception (ValueError):
+    String validation failed during schema extraction.
+
+```
+
+## Singleton Architecture
+
+The class is completely stateless. It is instantiated exactly once as a module-level
+immutable singleton (`PRETTY`). The entire runtime environment references this instance
+to prevent thread-safety issues or memory reallocations.
+"""
 
 _DESIGN_NOTES = """
 # PRETTY
@@ -130,14 +209,16 @@ A block containing the error name, the free-form message, and location info.
 The most comprehensive format including structured fields (Expected, Got, 
 Problem), remediation hints (How to fix), and the origin of the error.
     ═════════════════════════════════════════════════════════════════
-    ⚠️ VALIDATION ERROR: value_label
+    ⚠️ VALIDATION ERROR: label
     ═════════════════════════════════════════════════════════════════
     Message:   ...
     Expected:  ...
     Got:       "..." (type)
     Problem:   ...
+               ...
     Context:   ...
-    File info: File: ... | Line: ... | Function: ...
+               ...
+    File info: ... | Line: ... | Function: ...
     File path: ...
     ─────────────────────────────────────────────────────────────────
     🔧 How to fix:

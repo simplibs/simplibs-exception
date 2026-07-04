@@ -1,67 +1,80 @@
+# Core Classes
 from .SimpleException import SimpleException
-from .core import SimpleExceptionSettings, SimpleExceptionData
-from .modes import (
-    PRETTY,
-    SIMPLE,
-    ONELINE,
-    LOG,
-    ModeBase
-)
-from .tools import (
-    bool_or_exception,
-    raise_with_location_offset
-)
-from .tools.decorators import raise_location_offset
+from .SimpleExceptionData import SimpleExceptionData
+from .SimpleExceptionSettings import SimpleExceptionSettings
+
+# Rendering Modes
+from .modes import LOG, ONELINE, PRETTY, SIMPLE, ModeBase
+
+# Structural Static Protocols
+from .protocols import ModeBaseProtocol, SimpleExceptionDataProtocol, SimpleExceptionProtocol
+
+# Developer Tools
+from .tools import bool_or_exception, raise_location_offset, raise_with_location_offset
 
 __all__ = [
-    # Core class
+    # Core Infrastructure
     "SimpleException",
-    "SimpleExceptionSettings",
     "SimpleExceptionData",
-    # Modes
+    "SimpleExceptionSettings",
+
+    # Render Modes Singleton Engines
     "PRETTY",
     "SIMPLE",
     "ONELINE",
     "LOG",
     "ModeBase",
-    # Tools
+
+    # Advanced Developer Tooling
     "bool_or_exception",
     "raise_with_location_offset",
     "raise_location_offset",
+
+    # Static Typing Type-Hinting Protocols
+    "SimpleExceptionProtocol",
+    "SimpleExceptionDataProtocol",
+    "ModeBaseProtocol",
 ]
 
 _DESIGN_NOTES = """
-# Package Entry Point
+# Framework Root Entry Point
 
 ## Purpose
-This module defines the public API for the `SimpleException` library. It 
-exposes the primary exception class, configuration settings, and output modes 
-while keeping internal implementation details (like mixins and private core 
-logic) hidden from the end user.
+This module serves as the primary public API gateway for the `SimpleException` library ecosystem. 
+It establishes a highly ergonomic, "Flat API" abstraction layer, exposing all operational 
+classes, telemetry singletons, static typing blueprints, and execution tools from a single root namespace 
+while keeping internal processing matrices completely encapsulated.
 
-## Exported Components
+## Strategic Export Segmentation
 
-### 1. The Core
-- **SimpleException**: The main exception class to be inherited or raised directly.
-- **SimpleExceptionSettings**: Global configuration (colors, default limits, etc.).
-- **SimpleExceptionData**: Data container for exception state, useful for typing.
+### 1. Core Infrastructure
+- `SimpleException`: The primary exceptions foundation designed to be caught or raised directly.
+- `SimpleExceptionData`: The frozen data container carrying the complete state context of a captured failure, optimized for read-only extension pipelines.
+- `SimpleExceptionSettings`: Global configuration registry managing framework behavior, color schemas, and truncation boundaries.
 
-### 2. Output Modes (Singletons)
-Pre-configured instances that define how the exception message is rendered:
-- **PRETTY**: Default framed output for terminal.
-- **SIMPLE**: Plain text output without frames.
-- **ONELINE**: Compact single-line output.
-- **LOG**: Structured key=value format for machine processing.
-- **ModeBase**: Abstract base for creating custom output formats.
+### 2. Render Singletons & Formatting Foundations
+Pre-instantiated formatting engines governing how diagnostic payloads are serialized:
+- `PRETTY`: Structured framed presentation tailored for terminal readouts.
+- `SIMPLE`: Clean textual output stripped of structural borders.
+- `ONELINE`: High-density single-row presentation.
+- `LOG`: Key=value tokenized string serialization optimized for downstream log ingestion pipelines.
+- `ModeBase`: Abstract architectural blueprint for deriving specialized custom layout rendering modules.
 
-### 3. Developer Tools
-Utilities for handling call stack manipulation and result-based exceptions:
-- **bool_or_exception**: Converts boolean results into raised exceptions.
-- **raise_location_offset**: Decorator to shift the reported error location.
-- **raise_with_location_offset**: Function for manual location shifting.
+### 3. Developer Tooling Matrix
+Advanced execution utilities modifying stack navigation or intercepting evaluation chains:
+- `bool_or_exception`: Intercepts functional failure gates to return False or trigger a fully typed error instance.
+- `raise_location_offset`: High-level declarative decorator automating runtime caller-site trace shifts.
+- `raise_with_location_offset`: Low-level imperative functional helper providing explicit trace-shifting mechanics.
 
-## Architecture Pattern
-The library follows a "Flat API" pattern where all essential tools are 
-accessible from the top-level package, while the source code remains 
-highly modular and categorized in subdirectories.
+### 4. Static Typing Protocols
+Explicit typing contracts mapped to internal system boundaries, enabling developers to write resilient, 
+statically testable applications without binding to runtime code abstractions:
+- `SimpleExceptionProtocol`: The strict structural type contract of the primary exception object.
+- `SimpleExceptionDataProtocol`: Defines access methods for reading underlying stored context states.
+- `ModeBaseProtocol`: Enforces interface validation when rolling custom rendering layers.
+
+## Architecture Guidelines
+By leveraging selective double-entry proxy definitions through internal sub-package `__all__` arrays, 
+the system achieves an optimal balance between micro-modular repository file layouts and frictionless 
+client consumption mechanics.
 """

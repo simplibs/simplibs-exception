@@ -1,44 +1,75 @@
-from typing import NoReturn, Any
+from typing import TYPE_CHECKING, Any, NoReturn
+# Annotations
+if TYPE_CHECKING:
+    from ..protocols import SimpleExceptionProtocol
 
 
 def raise_with_location_offset(
-    exc: Any,
-    offset: int = 1
+    exc: "BaseException | SimpleExceptionProtocol | Any",
+    offset: int = 1,
 ) -> NoReturn:
-    """
-    Takes an exception, applies a location offset, and raises it.
+    """Takes an exception, applies a relative stack-frame location offset if supported, and raises it.
 
-    This is a helper for: raise exc.with_location_offset(offset)
+    Acts as an operational functional wrapper shortcut for the fluent method call:
+    `raise exc.with_location_offset(offset)`
+
+    Args:
+        exc: The target exception instance to be processed and thrown.
+        offset: The relative number of frames to shift the location tracing vector back.
+
+    Raises:
+        BaseException: The incoming exception instance, with or without a mutated trace context.
     """
-    # 1. Check if the exception supports offset (duck typing)
+    # 1. Evaluate via runtime duck-typing whether the exception supports frame shifting mutation
     if hasattr(exc, "with_location_offset"):
         raise exc.with_location_offset(offset)
 
-    # 2. Fallback for standard exceptions
-    raise exc
+    # 2. Resilient fallback for standard Python exceptions (e.g. ValueError, TypeError).
+    # Using 'from None' prevents Python from compounding a local frame mutation exception context,
+    # thereby fully preserving the original underlying traceback of the raw exception object.
+    raise exc from None
 
 
 _DESIGN_NOTES = """
 # raise_with_location_offset
 
 ## Purpose
-A functional wrapper for the `with_location_offset` method. It allows raising 
-an exception with a shifted stack trace in a single elegant call.
+A specialized operational wrapper optimized for advanced error-propagation and re-targeting tasks. 
+It enables developers to cleanly recalibrate and trigger an exception's internal stack trace tracking 
+state in a single unified command pass.
 
-## Why Any and not SimpleException
-To avoid circular dependencies, we don't import `SimpleException` at the 
-module level. Instead, we use duck typing — if the object has the 
-`with_location_offset` method, we use it. This makes the tool more robust 
-and prevents import-time issues.
+## Code Pattern Comparison
 
-## Usage
-Instead of:
-    exc = MyError(...)
+### Standard Blueprint Context
+```python
+try:
+    process_data(payload)
+except ValueError as err:
+    exc = SimpleException("Processing failed", exception=err)
     raise exc.with_location_offset(1)
 
-You can use:
-    raise_with_location_offset(exc, 1)
+```
 
-This is particularly useful in catch-all blocks or decorators where you 
-want to re-target the error origin to the caller of the current function.
+### Consolidated Utility Layout
+
+```python
+try:
+    process_data(payload)
+except ValueError as err:
+    raise_with_location_offset(SimpleException("Processing failed", exception=err), 1)
+
+```
+
+## Architectural Duck-Typing Constraints
+
+To completely dismantle import-time dependency loops and remain decoupled from specific high-level exception
+blueprints, the function relies on explicit structural duck-typing. It validates the presence of the
+`with_location_offset` method programmatically at runtime.
+
+## Standard Python Fallback Interception
+
+When consuming native standard exceptions (such as `KeyError`), the target object lacks the custom trace-shifting
+API. The system seamlessly downgrades into a generic passthrough dispatcher. Triggering `raise exc from None`
+ensures that the core interpreter contextually emits the existing object matrix while isolating the
+original traceback graph from being overwritten by this helper tool's local frame.
 """

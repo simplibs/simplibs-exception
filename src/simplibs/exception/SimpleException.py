@@ -1,42 +1,26 @@
+from typing import TYPE_CHECKING, Any
 from simplibs.sentinels import UNSET, UnsetType
 # Inners
-from .core import SimpleExceptionData
-from .core import SimpleExceptionSettings as S
-from .core._exception_mixins.dunders import DunderInitSubclassMixin, DunderNewMixin
-from .core._exception_mixins.transformators import WithLocationOffsetMixin
-from .core._exception_mixins.serializers import ToDictMixin, ToDebugDictMixin, ToJsonMixin
-from .core._exception_mixins.normalizers import (
-    NormalizeParamMixin,
-    ProcessExceptionParamMixin,
-    ProcessHowToFixParamMixin,
-    ProcessSkipLocationsParamMixin,
-    ProcessGetLocationParamMixin
+from .SimpleExceptionData import SimpleExceptionData
+from ._core_logic.lifecycle.init_utils import (
+    normalize_string,
+    normalize_strings,
+    normalize_exception,
+    normalize_bool,
+    process_get_location,
+    process_skip_locations,
+    assemble_message
 )
+from ._core_logic.lifecycle.init_subclass import check_children_attributes
+from ._core_logic.lifecycle.new_method import add_exception_type
+from ._core_logic.tracing import with_location_offset as _with_location_offset
+# Annotations
+if TYPE_CHECKING:
+    from .protocols import SimpleExceptionProtocol
 
 
-class SimpleException(
-    # Base class
-    SimpleExceptionData,            # Base class with class-level attributes
-    # Dunders
-    DunderInitSubclassMixin,        # __init_subclass__(cls, **kwargs) -> None
-    DunderNewMixin,                 # __new__(cls, *args, exception: type[Exception] | UnsetType, **kwargs) -> None
-    # Normalizers
-    NormalizeParamMixin,            # _normalize_param(self, value: Any, attr: str, typ: type) -> Any
-    ProcessExceptionParamMixin,     # _process_exception_param(self, value: type[Exception]) -> tuple[type[Exception] | UnsetType, str | UnsetType]
-    ProcessHowToFixParamMixin,      # _process_how_to_fix_param(self, value: tuple[str, ...] | str | UnsetType) -> tuple[str, ...] | UnsetType
-    ProcessSkipLocationsParamMixin, # _process_skip_locations_param(self, value: tuple[str, ...] | list[str] | str | UnsetType) -> tuple[str, ...]
-    ProcessGetLocationParamMixin,   # _process_get_location_param(self, value: int | bool | UnsetType) -> int | bool
-    # Serializers
-    ToDictMixin,                    # to_dict(self) -> dict
-    ToDebugDictMixin,               # to_debug_dict(self) -> dict
-    ToJsonMixin,                    # to_json(self) -> str
-    # Transformators
-    WithLocationOffsetMixin,        # with_location_offset(self, offset: int = 1) -> "SimpleException"
-    # Base exceptions
-    Exception                       # Base exception enabling the raise mechanism
-):
-    """Structured exception for the Simple ecosystem."""
-
+class SimpleException(SimpleExceptionData, Exception):
+    """Structured runtime exception engine optimized for the Simple ecosystem."""
 
     # -------------------------------------------------------------------------
     # __init__ — attribute assignment and message assembly
@@ -44,187 +28,132 @@ class SimpleException(
 
     def __init__(
         self,
-        message: str | UnsetType = UNSET,
+        message: str | None = None,
         *,
-        value: object = UNSET,
-        value_label: str | UnsetType = UNSET,
-        expected: str | UnsetType = UNSET,
-        problem: str | UnsetType = UNSET,
-        context: str | UnsetType = UNSET,
-        how_to_fix: tuple[str, ...] | str | UnsetType = UNSET,
-        error_name: str | UnsetType = UNSET,
-        exception: Exception | type[Exception] | UnsetType = UNSET,
-        get_location: bool | int | UnsetType = UNSET,
-        skip_locations: tuple[str, ...] | str | UnsetType = UNSET,
+        value: Any = UNSET,
+        label: str | None = None,
+        expected: str | None = None,
+        problem: str | tuple[str, ...] | list[str] | None = None,
+        context: str | tuple[str, ...] | list[str] | None = None,
+        how_to_fix: str | tuple[str, ...] | list[str] | None = None,
+        error_name: str | None = None,
+        exception: Exception | type[Exception] | None = None,
+        get_location: bool | int | None = None,
+        skip_locations: tuple[str, ...] | str | None = None,
         oneline: bool = False,
-    ):
-
-        # --- Core info ---
-        self.error_name = self._normalize_param(error_name, "error_name", str)
-        self.exception, self._intercepted_exception = self._process_exception_param(exception)
+    ) -> None:
+        # --- Core metadata ---
+        self.error_name = normalize_string(self, error_name, "error_name")
+        self.exception = normalize_exception(self, exception)
 
         # --- Inspected value ---
         self.value = value
-        self.value_label = self._normalize_param(value_label, "value_label", str)
+        self.label = normalize_string(self, label, "label")
 
         # --- Exception description ---
-        self.expected = self._normalize_param(expected, "expected", str)
-        self.problem = self._normalize_param(problem, "problem", str)
-        self.context = self._normalize_param(context, "context", str)
-        self.message = self._normalize_param(message, "message", str)
+        self.expected = normalize_string(self, expected, "expected")
+        self.message = normalize_string(self, message, "message")
+        self.problem = normalize_strings(self, problem, "problem")
+        self.context = normalize_strings(self, context, "context")
 
-        # --- How to fix ---
-        self.how_to_fix = self._process_how_to_fix_param(how_to_fix)
+        # --- Actionable remediation ---
+        self.how_to_fix = normalize_strings(self, how_to_fix, "how_to_fix")
 
-        # --- Location ---
-        self._get_location = self._process_get_location_param(get_location)
-        self._skip_locations = self._process_skip_locations_param(skip_locations)
+        # --- Location metadata options ---
+        self.get_location = process_get_location(get_location)
+        self.skip_locations = process_skip_locations(skip_locations)
 
-        # --- Single-line output ---
-        self._oneline = self._normalize_param(oneline, "oneline", bool)
+        # --- Layout overrides ---
+        self.oneline = normalize_bool(self, oneline, "oneline")
 
-        # --- Assemble the message ---
-        self._rendered_message = self._render_message()
+        # --- Compile the visual terminal text footprint ---
+        self.rendered_message = assemble_message(self, oneline)
 
-        # --- Initialise Exception — bypasses the dataclass __init__ in the MRO ---
-        Exception.__init__(self, self._rendered_message)
-
-
-    # -------------------------------------------------------------------------
-    # Message assembly — delegates to the output mode
-    # -------------------------------------------------------------------------
-
-    def _render_message(self) -> str:
-        """Passes the data to the active mode and returns the assembled string."""
-        if self._oneline:
-            from .modes import ONELINE
-            return ONELINE(self, validate=False)
-        return S.DEFAULT_MESSAGE_MODE(self, validate=False)
-
+        # --- Initialize Exception base class, bypassing dataclass __init__ in MRO ---
+        Exception.__init__(self, self.rendered_message)
 
     # -------------------------------------------------------------------------
     # Dunder methods
     # -------------------------------------------------------------------------
 
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}(error_name={self.error_name!r}, value={self.value!r})>"
+    def __new__(
+        cls,
+        *args: Any,
+        exception: type[Exception] | UnsetType = UNSET,
+        **kwargs: Any
+    ) -> "SimpleExceptionProtocol":
+        """
+        Dynamically injects a foreign exception type into the class ancestors (MRO) if provided.
+        """
+        return add_exception_type(cls, exception)
+
+    def __init_subclass__(
+        cls,
+        **kwargs: Any
+    ) -> None:
+        """
+        Validates the contract of concrete subclasses during definition to catch syntax typos early.
+        """
+        super().__init_subclass__(**kwargs)
+        check_children_attributes(SimpleExceptionData, cls)
 
     def __str__(self) -> str:
-        return self._rendered_message
+        """
+        Returns the fully compiled visual layout string block representation of the exception.
+        """
+        return self.rendered_message
+
+    def __repr__(self) -> str:
+        """
+        Returns an unambiguous engineering string representation containing the class identity.
+        """
+        return f"<{self.__class__.__name__}(error_name={self.error_name!r})>"
+
+    # -------------------------------------------------------------------------
+    # Transformators
+    # -------------------------------------------------------------------------
+
+    def with_location_offset(
+        self: "SimpleExceptionProtocol", offset: int = 1
+    ) -> "SimpleExceptionProtocol":
+        """
+        Spawns a modified clone of this exception with an adjusted file-tracking stack lookup depth.
+        """
+        return _with_location_offset(self, offset)
 
 
 _DESIGN_NOTES = """
 # SimpleException
 
 ## Purpose
-The core class of the ecosystem — a structured exception that combines a data
-layer, validation, normalisation, and output modes into a single unit. Designed
-so that the exception itself communicates with the developer — describing the
-cause, the circumstances, and the path to a fix.
+The primary, executable operational component of the error framework. It merges the pure 
+data state storage of `SimpleExceptionData` with the native python control-flow capabilities 
+of `Exception`. It orchestrates dynamic type interception, subclass safety audits, 
+and text output generation.
 
-## Class composition
-`SimpleException` is assembled from mixins, each with a single responsibility:
+## Separation of Concerns (Role Architecture)
+- **Data & Serialization (`SimpleExceptionData`)**: Acts as the passive data model. It owns the parameters, 
+  lazy property caching, and public analytics state exporters (`to_dict()`, `to_json()`).
+- **Runtime & Execution (`SimpleException`)**: Acts as the active execution manager. It normalizes inputs, 
+  assembles the final rendering block layout, controls inheritance, and provides runtime mutation tools.
 
-### Data layer
-- `SimpleExceptionData` — class-level attributes and default values, the source
-  of truth for all parameters. Subclasses can override them.
+## Initialization Lifecycle & MRO Management
+1. **Dynamic MRO Mutation (`__new__`)**: Before allocation occurs, `__new__` checks for intercepted exception signatures. 
+   If one exists, it mutates the class graph dynamically so that standard `except CapturedError:` hooks trigger seamlessly.
+2. **Subclass Typos Guard (`__init_subclass__`)**: Runs at compile/import time to prevent developers from defining illegal 
+   properties on custom sub-exceptions, catching naming errors before production execution.
+3. **MRO Intercept Bypass**: Dataclasses automatically generate an `__init__` that resets fields. `SimpleException.__init__` 
+   explicitly overrides this, normalizes properties via `init_utils`, and bypasses dataclass initialization by 
+   directly invoking `Exception.__init__(self, self.rendered_message)`.
 
-### Dunders
-- `DunderInitSubclassMixin` — validates subclasses at definition time,
-  catching typos and incorrect types immediately on import.
-- `DunderNewMixin` — dynamically adds `exception` to the instance ancestors,
-  enabling `isinstance(e, ValueError)` without static inheritance.
+## Environment Magic Hooks
+- **`__str__`**: Controls the text stream interface. It maps directly to `self.rendered_message`, causing terminals, 
+  test frameworks, and traceback loggers to print the cleanly structured formatting panel natively.
+- **`__repr__`**: Delivers a concise developer signature. It references `self.__class__.__name__` ensuring that 
+  even dynamically generated virtual class paths reveal their runtime categories accurately during inspection.
 
-### Normalizers
-- `NormalizeParamMixin` — normalises simple parameters based on a type check.
-  If the value does not match the expected type, the class-level default is
-  returned. Never raises an exception.
-- `ProcessExceptionParamMixin` — processes the `exception` parameter,
-  accepting both an exception class and an exception instance. Handles the
-  fallback to the class-level default internally when no value is provided —
-  consistent with the other normalisation methods.
-- `ProcessHowToFixParamMixin` — normalises the `how_to_fix` parameter,
-  accepting `str`, `tuple[str, ...]`, or `list[str]` and normalising to
-  `tuple[str, ...]`. Falls back to the class-level default.
-- `ProcessGetLocationParamMixin` — processes the `get_location` parameter,
-  returning the provided value or `S.DEFAULT_GET_LOCATION` from settings.
-  Unlike other normalisations, the fallback comes from settings rather than
-  the class-level default — `get_location` is a global library setting.
-- `ProcessSkipLocationsParamMixin` — processes the `skip_locations` parameter,
-  normalises the input to `tuple[str, ...]` and merges it with
-  `S.DEFAULT_LOCATION_BLACKLIST`. The merge happens inside the method —
-  the user's blacklist and the global blacklist always apply together.
-
-### Properties
-- `CallerInfoMixin` — provides the lazily-computed `caller_info` property for 
-  accessing stack frame details.
-
-### Serializers
-- `ToDictMixin` — public attributes as a dictionary, UNSET values omitted.
-- `ToDebugDictMixin` — public and private computed attributes as a dictionary.
-- `ToJsonMixin` — public attributes as a JSON string.
-
-### Transformators
-- `WithLocationOffsetMixin` — provides the `with_location_offset` method for 
-  creating modified instances with a shifted stack depth.
-
-## Private vs public attributes
-Attributes are divided by their semantics:
-
-**Public** — exception data, included in `to_dict()`:
-    error_name, exception, value, value_label,
-    expected, problem, context, message, how_to_fix
-
-**Private** — behavioural configuration and computed values, only in `to_debug_dict()`:
-    _get_location, _skip_locations, _oneline,
-    _intercepted_exception, _rendered_message
-
-## Output modes
-The message is assembled in `_render_message()`, which delegates to a mode:
-- `_oneline=True` — uses the `ONELINE` mode (lazy import)
-- otherwise — uses `S.DEFAULT_MESSAGE_MODE` (default: `PRETTY`)
-
-The lazy import of `ONELINE` in `_render_message` is intentional — it prevents
-a circular dependency between the `exception` and `modes` modules.
-
-## Processing flow in `__init__`
-    1. Normalise core info (error_name, exception)
-    2. Normalise the inspected value (value, value_label)
-    3. Normalise the exception description (expected, problem, context, message)
-    4. Process how_to_fix
-    5. Process location (_get_location, _skip_locations)
-    6. Set the output format (_oneline)
-    7. Assemble the message via _render_message()
-    8. Pass the message to Exception.__init__()
-
-## How to create a custom exception
-    class MyValidationError(SimpleException):
-        error_name = "VALIDATION ERROR"
-        expected   = "a positive integer"
-        how_to_fix = (
-            "Provide a value greater than 0.",
-            "Use the int type.",
-        )
-
-    raise MyValidationError(value=age, value_label="parameter age")
-
-Class-level attributes overridden on the subclass take precedence over
-parameters — they can always be overridden again at the call site.
-
-## Using the exception parameter
-    # As a class:
-    raise SimpleException(exception=ValueError, problem="negative value")
-
-    # As an instance from an except block:
-    try:
-        ...
-    except ValueError as e:
-        raise SimpleException(exception=e, problem="negative value")
-
-## Notes
-- `_render_message` stores the result in `self._rendered_message` — a private
-  attribute that `__str__` returns directly. `self.message` remains a clean
-  input parameter accessible via `to_dict()`.
-- All normalisation methods are designed to never raise an exception —
-  in the worst case they return the class-level default or the settings value.
+## Transformative Re-raising
+The `with_location_offset()` method allows wrappers or catch-and-raise middleware patterns to offset the 
+file lookup boundary. It clones the current error structure with increased inspection depth, ensuring that the 
+rendered output points directly to the real application layer code rather than internal routing blocks.
 """
