@@ -32,26 +32,48 @@ class PrettyMessage(ModeBase):
         Dynamically adapts and renders the exception into a beautiful framed output.
         Handles empty, message-only, and fully structured data seamlessly.
 
-        ## Full output preview:
-        ═════════════════════════════════════════════════════════════════
-        ⚠️ VALIDATION ERROR: label
-        ═════════════════════════════════════════════════════════════════
-        Message:   ...
-        Expected:  ...
-        Got:       "..." (type)
-        Problem:   ...
-                   ...
-        Context:   ...
-                   ...
-        File info: ... | Line: ... | Function: ...
-        File path: ...
-        ─────────────────────────────────────────────────────────────────
-        🔧 How to fix:
-             • ...
-             • ...
-        ═════════════════════════════════════════════════════════════════
-        Intercepted exception (ValueError):
-            Expecting value: line 1 column 1 (char 0)
+        The layout engine is fully elastic: it only renders lines for which data has
+        been explicitly provided, automatically skipping missing attributes and adjusting
+        internal frame dividers. This variability gives you complete control over the final
+        output footprint based entirely on the arguments passed to the exception.
+
+        Output Layouts:
+
+            1. Empty Call / Absolute Minimum:
+            ═════════════════════════════════════════════════════════════════
+            ⚠️ ERROR NAME
+            File info: ... | line: ... | function: ...
+            File path: ...
+            ═════════════════════════════════════════════════════════════════
+
+            2. Message-Only Layout:
+            ═════════════════════════════════════════════════════════════════
+            ⚠️ ERROR NAME
+            Message:   ...
+            File info: ... | line: ... | function: ...
+            File path: ...
+            ═════════════════════════════════════════════════════════════════
+
+            3. Full Structured Layout:
+            ═════════════════════════════════════════════════════════════════
+            ⚠️ ERROR NAME: label
+            ═════════════════════════════════════════════════════════════════
+            Message:   ...
+            Expected:  ...
+            Got:       ... (type)
+            Problem:   ...
+                       ...
+            Context:   ...
+                       ...
+            File info: ... | line: ... | function: ...
+            File path: ...
+            ─────────────────────────────────────────────────────────────────
+            🔧 How to fix:
+                 • ...
+                 • ...
+            ═════════════════════════════════════════════════════════════════
+            Intercepted exception (type):
+                ...
         """
         location = data.caller_info
 
@@ -175,65 +197,4 @@ Intercepted exception (ValueError):
 The class is completely stateless. It is instantiated exactly once as a module-level
 immutable singleton (`PRETTY`). The entire runtime environment references this instance
 to prevent thread-safety issues or memory reallocations.
-"""
-
-_DESIGN_NOTES = """
-# PRETTY
-
-## Purpose
-The default `SimpleException` mode — a structured output framed with double
-lines that visually separates the exception from surrounding terminal output.
-Designed to reduce cognitive load when reading error output.
-
-## Location Handling
-The mode retrieves call site information via the `data.caller_info` property. 
-If location reporting is enabled, it is displayed within the `File info` 
-section. If no information is available, the line is omitted.
-
-## Output scenarios
-
-### Empty call
-A minimal block containing only the error name and location info.
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ ERROR: File: ... | Line: ... | Path: ... | Function: ...
-    ═════════════════════════════════════════════════════════════════
-
-### Message only
-A block containing the error name, the free-form message, and location info.
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ ERROR: Message...
-    File: ... | Line: ... | Path: ... | Function: ...
-    ═════════════════════════════════════════════════════════════════
-
-### Full output
-The most comprehensive format including structured fields (Expected, Got, 
-Problem), remediation hints (How to fix), and the origin of the error.
-    ═════════════════════════════════════════════════════════════════
-    ⚠️ VALIDATION ERROR: label
-    ═════════════════════════════════════════════════════════════════
-    Message:   ...
-    Expected:  ...
-    Got:       "..." (type)
-    Problem:   ...
-               ...
-    Context:   ...
-               ...
-    File info: ... | Line: ... | Function: ...
-    File path: ...
-    ─────────────────────────────────────────────────────────────────
-    🔧 How to fix:
-         • ...
-         • ...
-    ═════════════════════════════════════════════════════════════════
-    Intercepted exception (ValueError):
-        Expecting value: line 1 column 1 (char 0)
-
-## Fields and their display conditions
-All fields are optional and are displayed only when they contain data (not UNSET).
-`intercepted_exception` is shown below the closing double line as supplementary 
-information about the original caught exception.
-
-## Singleton
-The class is used exclusively through the `PRETTY` instance. It is stateless 
-and designed as a singleton for the entire ecosystem.
 """

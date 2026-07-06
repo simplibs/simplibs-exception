@@ -27,22 +27,36 @@ class OnelineMessage(ModeBase):
         Dynamically adapts and flattens all available exception fields into
         a single, pipe-separated string. Handles all data states automatically.
 
-        ## Full output preview:
-        ⚠️ ERROR: label | Message: ... | Expected: ... | Got: ... | Problem: ... | Context: ... | File: ...
+        The layout engine is fully elastic: it only renders segments for which data has
+        been explicitly provided, automatically skipping missing attributes. Fields are
+        joined horizontally in a strict chronological sequence, ensuring a dense layout
+        without introducing line breaks.
 
-        ## Field order:
-        1. `error_name` + `label` — primary identification via `_print_intro_line`
-        2. `message` — free-form message
-        3. `expected` — description of the desired state
-        4. `Got` — the inspected value with its type
-        5. `problem` — description of the actual error
-        6. `context` — additional situational information
-        7. Location — file, line, and function info
+        Field Order (when fully populated):
+            1. Intro:        ⚠️ ERROR NAME: label
+            2. Message:      Message: ...
+            3. Expected:     Expected: ...
+            4. Got:          Got: ... (type)
+            5. Problem:      Problem: ...
+            6. Context:      Context: ...
+            7. File Info:    File info: ... | line: ... | function: ...
+            8. File Path:    File path: ...
+
+        Output Layouts:
+
+            1. Empty Call / Absolute Minimum:
+            ⚠️ ERROR NAME | File info: ... | line: ... | function: ... | File path: ...
+
+            2. Message-Only Layout:
+            ⚠️ ERROR NAME | Message: ... | File info: ... | line: ... | function: ... | File path: ...
+
+            3. Full Structured Layout:
+            ⚠️ ERROR NAME: label | Message: ... | Expected: ... | Got: ... (type) | Problem: ... | Context: ... | File info: ... | line: ... | function: ... | File path: ...
         """
         location = data.caller_info
 
         # Gather all formatted parts using standard human prefixes
-        raw_parts = [
+        parts = [
             print_intro(data.error_name, data.label),
             print_message(data.message),
             print_expected(data.expected),

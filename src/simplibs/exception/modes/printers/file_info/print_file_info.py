@@ -6,17 +6,22 @@ def print_file_info(
 ) -> str | None:
     """
     Renders standard file metadata including filename, line number, and function name.
-    Safely skips internal dynamic execution frames.
+
+    If the input value is empty or omitted, the function gracefully returns None.
+
+    Output Formats:
+        Standard Mode:
+            Structure: <PREFIX><FILE> | line: <LINE> | function: <FUNCTION>
+            Example:   File info: src/auth/service.py | line: 42 | function: login_user
+
+        Log Mode (_log_mode=True):
+            Structure: file='<FILE>' line=<LINE> function='<FUNCTION>'
+            Example:   file='src/auth/service.py' line=42 function='login_user'
     """
     if not caller_info:
         return None
 
     file = caller_info["file"]
-
-    # If it is a dynamic or internal Python evaluation frame, skip the line entirely
-    if file.startswith("<"):
-        return None
-
     line = caller_info["line"]
     function = caller_info["function"]
 
@@ -36,11 +41,19 @@ Renders essential location metadata (filename, line number, and function name)
 stating exactly where the error materialized, acting as the primary navigation 
 anchor for debugging.
 
-## Dynamic Frame Filtering
-Consistent with `print_file_path`, this function short-circuits if the `file` 
-attribute begins with `<` (e.g., `<string>`). This ensures we don't dump meaningless, 
-non-existent file metadata into the output when code runs inside dynamic execution 
-environments like `exec()` or interactive REPL shells.
+## Data Lifecycle & Frame Trust
+This function operates under the architectural assumption that the incoming 
+`caller_info` dictionary originates exclusively from the standard `SimpleException` 
+processing pipeline. 
+
+During that lifecycle, `process_skip_locations` forcefully merges any user-defined 
+`LOCATION_BLACKLIST` or `skip_locations` parameters with `SimpleExceptionSettings._SYSTEM_BLACKLIST`. 
+Because `_SYSTEM_BLACKLIST` permanently contains `"<"` and `"simplibs/exception"`, all internal 
+Python evaluation frames (such as `<string>`) and internal framework internals are guaranteed 
+to be stripped out *before* reaching this formatting layer. 
+
+As a result, this printer contains no defensive filtering or validation logic for 
+dynamic frames, maintaining a zero-redundancy, high-performance rendering path.
 
 ## Log Mode Structural Integrity
 When `_log_mode=True`, the function generates an explicit key-value string:

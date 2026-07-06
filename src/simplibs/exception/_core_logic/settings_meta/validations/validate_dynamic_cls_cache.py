@@ -3,7 +3,9 @@ from typing import Any
 from ...._core_logic.internal_exceptions import SimpleExceptionSettingsError
 
 
-def validate_dynamic_cls_cache(value: Any) -> None:
+def validate_dynamic_cls_cache(
+    value: Any
+) -> None:
     """Verifies that the value is an empty dict — only allowed for cache reset."""
     if value != {}:
         raise SimpleExceptionSettingsError(

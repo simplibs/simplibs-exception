@@ -1,60 +1,59 @@
-"""
-Tests for raise_with_location_offset — duck typing check and fallback logic.
-"""
 import pytest
-from unittest.mock import MagicMock
-from simplibs.exception.tools.raise_with_location_offset import raise_with_location_offset
+
+from simplibs.exception.tools.raise_with_location_offset import (
+    raise_with_location_offset,
+)
 
 
-# -----------------------------------------------------------------------------
-# Duck typing support (SimpleException-like objects)
-# -----------------------------------------------------------------------------
+class _FakeLocationAwareError(Exception):
+    def __init__(self, tag):
+        super().__init__(tag)
+        self.tag = tag
+        self.offset_applied = None
 
-def test_calls_with_location_offset_if_present():
-    """If the exception has the method, it must be called with the provided offset."""
-    mock_exc = MagicMock()
-    mock_exc.with_location_offset.return_value = mock_exc
-
-    with pytest.raises(Exception):
-        raise_with_location_offset(mock_exc, offset=2)
-
-    mock_exc.with_location_offset.assert_called_once_with(2)
+    def with_location_offset(self, offset=1):
+        new = _FakeLocationAwareError(self.tag)
+        new.offset_applied = offset
+        return new
 
 
-def test_raises_the_returned_exception_from_offset_method():
-    """It must raise the object returned by the with_location_offset method."""
+def test_raises_the_result_of_with_location_offset_for_supporting_exceptions():
+    exc = _FakeLocationAwareError("original")
 
-    class CustomRaisedError(Exception): pass
+    with pytest.raises(_FakeLocationAwareError) as exc_info:
+        raise_with_location_offset(exc, offset=1)
 
-    mock_exc = MagicMock()
-    mock_exc.with_location_offset.return_value = CustomRaisedError("Shifted error")
+    assert exc_info.value.offset_applied == 1
 
-    with pytest.raises(CustomRaisedError, match="Shifted error"):
-        raise_with_location_offset(mock_exc)
-
-
-# -----------------------------------------------------------------------------
-# Fallback logic (Standard exceptions)
-# -----------------------------------------------------------------------------
-
-def test_raises_standard_exception_without_offset_method():
-    """If the method is missing, it must raise the original exception normally."""
-    standard_exc = ValueError("Standard error")
-
-    with pytest.raises(ValueError, match="Standard error"):
-        raise_with_location_offset(standard_exc)
-
-
-# -----------------------------------------------------------------------------
-# Default parameters
-# -----------------------------------------------------------------------------
 
 def test_default_offset_is_one():
-    """If offset is not provided, it should default to 1."""
-    mock_exc = MagicMock()
-    mock_exc.with_location_offset.return_value = mock_exc
+    exc = _FakeLocationAwareError("original")
 
-    with pytest.raises(Exception):
-        raise_with_location_offset(mock_exc)
+    with pytest.raises(_FakeLocationAwareError) as exc_info:
+        raise_with_location_offset(exc)
 
-    mock_exc.with_location_offset.assert_called_once_with(1)
+    assert exc_info.value.offset_applied == 1
+
+
+def test_custom_offset_is_forwarded():
+    exc = _FakeLocationAwareError("original")
+
+    with pytest.raises(_FakeLocationAwareError) as exc_info:
+        raise_with_location_offset(exc, offset=7)
+
+    assert exc_info.value.offset_applied == 7
+
+
+def test_plain_exception_without_location_support_is_raised_as_is():
+    exc = ValueError("plain error")
+
+    with pytest.raises(ValueError) as exc_info:
+        raise_with_location_offset(exc)
+
+    assert exc_info.value is exc
+
+
+def test_always_raises_never_returns():
+    exc = ValueError("plain error")
+    with pytest.raises(ValueError):
+        raise_with_location_offset(exc)

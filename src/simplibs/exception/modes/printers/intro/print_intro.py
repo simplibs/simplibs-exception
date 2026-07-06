@@ -8,6 +8,19 @@ def print_intro(
     """
     Renders the primary error header, combining the error name and an optional label.
     Adapts dynamically between machine-readable log format and human-friendly terminal layouts.
+
+    Output Formats:
+        Standard Mode:
+            Structure: <PREFIX><ERROR_NAME>[: <LABEL>]
+            Examples:
+                       ⚠️ VALUE_ERROR
+                       ⚠️ VALUE_ERROR: Invalid email format
+
+        Log Mode (_log_mode=True):
+            Structure: error='<ERROR_NAME>'[ label='<LABEL>']
+            Examples:
+                       error='VALUE_ERROR'
+                       error='VALUE_ERROR' label='Invalid email format'
     """
     # 1. LOG MODE: Structured key-value formatting for log parsers
     if _log_mode:

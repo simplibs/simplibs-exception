@@ -21,20 +21,20 @@ def bool_or_exception(
     """Returns False or raises SimpleException — a shortcut for conditional validation routines.
 
     Args:
-        return_bool: If True, intercepts execution and returns False immediately.
-                     If False, raises a configured SimpleException.
-        message: Custom error message override.
-        value: The evaluated payload that triggered the failure.
-        label: The name of the field, property, or context being validated.
-        expected: A clear description of the valid layout or type constraints.
-        problem: Precise description of what failed in the current state.
-        context: Broader execution state or diagnostic details.
-        how_to_fix: Actionable steps for the developer to resolve the issue.
-        error_name: Custom dynamic class name override for the exception.
-        exception: Foreign exception to link or inherit from.
-        get_location: Controls the stack-trace caller-site resolution depth.
+        return_bool:    If True, intercepts execution and returns False immediately.
+                        If False, raises a configured SimpleException.
+        message:        Custom error message override.
+        value:          The evaluated payload that triggered the failure.
+        label:          The name of the field, property, or context being validated.
+        expected:       A clear description of the valid layout or type constraints.
+        problem:        Precise description of what failed in the current state.
+        context:        Broader execution state or diagnostic details.
+        how_to_fix:     Actionable steps for the developer to resolve the issue.
+        error_name:     Custom dynamic class name override for the exception.
+        exception:      Foreign exception to link or inherit from.
+        get_location:   Controls the stack-trace caller-site resolution depth.
         skip_locations: Custom patterns to exclude during location resolution.
-        oneline: If True, forces ultra-compact single-line log-style output.
+        oneline:        If True, forces ultra-compact single-line log-style output.
 
     Returns:
         Literal[False]: Always returns False if return_bool is active.

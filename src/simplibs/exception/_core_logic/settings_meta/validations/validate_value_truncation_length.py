@@ -3,7 +3,9 @@ from typing import Any
 from ...._core_logic.internal_exceptions import SimpleExceptionSettingsError
 
 
-def validate_value_truncation_length(value: Any) -> None:
+def validate_value_truncation_length(
+    value: Any
+) -> None:
     """Verifies that the value is a positive integer.
 
     Raises:

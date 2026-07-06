@@ -10,8 +10,23 @@ def print_context(
     _oneline: bool = False,
 ) -> str | None:
     """
-    Renders the exception's context. Supporting standard,
-    flat single-line layout, or machine-readable logfmt formatting.
+    Renders the exception's context supporting standard multi-line, flat oneline, or logfmt formatting.
+
+    If the input value is empty or omitted, the function gracefully returns None.
+
+    Output Formats:
+        Standard Mode (Multi-line layout):
+            Structure: <PREFIX><CONTEXT_LINE_1><EMPTY_PREFIX><CONTEXT_LINE_2>...
+            Example:   Context:   Occurred during the batch migration of user profiles.
+                                  Processing record chunk #42 (items 4200-4300).
+
+        Oneline Mode (_oneline=True):
+            Structure: <PREFIX><CONTEXT_LINE_1> <CONTEXT_LINE_2>...
+            Example:   Context:   Occurred during the batch migration of user profiles. Processing record chunk #42 (items 4200-4300).
+
+        Log Mode (_log_mode=True):
+            Structure: context='<CONTEXT_FLATTENED_WITH_SPACES>'
+            Example:   context='Occurred during the batch migration of user profiles. Processing record chunk #42 (items 4200-4300).'
     """
     if not context:
         return None

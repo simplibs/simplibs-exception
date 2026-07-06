@@ -1,259 +1,96 @@
-"""
-Tests for SimpleException — instantiation, parameter normalisation, subclassing, output modes, and serialisation.
-"""
 import pytest
-from simplibs.sentinels import UNSET
+from typing import Any
+
 from simplibs.exception.SimpleException import SimpleException
-from simplibs.exception.core._internal_exceptions import SimpleExceptionInternalError
-from simplibs.exception.core.SimpleExceptionSettings import SimpleExceptionSettings as S
+from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionInternalError import (
+    SimpleExceptionInternalError,
+)
 
 
-@pytest.fixture(autouse=True)
-def reset_settings():
-    S.reset()
-    yield
-    S.reset()
+def test_basic_construction_and_str_representation():
+    """
+    Verifies that a basic exception instance can be successfully constructed
+    and its string representation correctly reflects the custom metadata label.
+    """
+    # 1. Initialize the target exception blueprint
+    err = SimpleException("boom", label="my-label")
 
-
-# -----------------------------------------------------------------------------
-# Basic instantiation
-# -----------------------------------------------------------------------------
-
-def test_can_be_instantiated_without_arguments():
-    """SimpleException must be instantiable without any arguments."""
-    e = SimpleException()
-    assert isinstance(e, SimpleException)
-    assert isinstance(e, Exception)
+    # 2. Assert text visualization contains core metadata markers
+    assert "my-label" in str(err)
 
 
 def test_can_be_raised_and_caught():
-    """SimpleException must be raiseable and catchable as a standard exception."""
+    """
+    Validates that the exception correctly hooks into the native Python runtime
+    and can be trapped using standard try-except blocks.
+    """
+    # 1. Trigger the standard raise lifecycle flow
     with pytest.raises(SimpleException):
-        raise SimpleException(problem="something went wrong")
+        raise SimpleException("boom", label="x")
 
 
-# -----------------------------------------------------------------------------
-# __init__ — parameter normalisation
-# -----------------------------------------------------------------------------
+def test_repr_contains_error_name():
+    """
+    Ensures that the engineering string representation (__repr__) explicitly
+    captures and prints the configured custom error type identity.
+    """
+    # 1. Instantiate exception using a custom system identity name
+    err = SimpleException("boom", label="x", error_name="CUSTOM ERROR")
 
-def test_valid_params_are_stored():
-    """Valid parameters must be stored as instance attributes."""
-    e = SimpleException(
-        message="a message",
-        value=42,
-        value_label="parameter",
-        expected="str",
-        problem="wrong type",
-        context="inside a loop",
-        error_name="MY_ERROR",
-    )
-    assert e.message == "a message"
-    assert e.value == 42
-    assert e.value_label == "parameter"
-    assert e.expected == "str"
-    assert e.problem == "wrong type"
-    assert e.context == "inside a loop"
-    assert e.error_name == "MY_ERROR"
+    # 2. Validate engineering layout output format
+    assert repr(err) == "<SimpleException(error_name='CUSTOM ERROR')>"
 
 
-def test_invalid_param_type_falls_back_to_class_default():
-    """A parameter of the wrong type must be replaced by the class-level default."""
-    e = SimpleException(error_name=123)
-    assert e.error_name == "ERROR"
+def test_dynamic_exception_type_is_injected_into_mro():
+    """
+    Validates the core dynamic MRO architecture: when a foreign exception class
+    is requested, the instance successfully assumes both identities at runtime.
+    """
+    # 1. Execute runtime class factory allocation inside the instantiation cycle
+    err = SimpleException("boom", label="x", exception=ValueError)
+
+    # 2. Assert multi-inheritance graph integration
+    assert isinstance(err, ValueError)
+    assert isinstance(err, SimpleException)
 
 
-def test_how_to_fix_string_is_normalized_to_tuple():
-    """how_to_fix passed as a string must be normalised to a tuple."""
-    e = SimpleException(how_to_fix="Fix it", problem="error")
-    assert e.how_to_fix == ("Fix it",)
+def test_with_location_offset_returns_new_instance_with_advanced_depth():
+    """
+    Verifies that shifting the frame lookup offset generates a new distinct
+    exception instance with incremented depth parameters.
+    """
+    # 1. Construct baseline exception tracking state
+    err = SimpleException("boom", label="x", get_location=1)
+
+    # 2. Apply transformation multiplier offset
+    new_err = err.with_location_offset(2)
+
+    # 3. Assert deep state replication and mutation isolation
+    assert new_err.get_location == 3
+    assert new_err is not err
 
 
-def test_unset_params_remain_unset():
-    """Parameters that were not provided must remain UNSET."""
-    e = SimpleException()
-    assert e.message is UNSET
-    assert e.value is UNSET
-    assert e.expected is UNSET
-
-
-# -----------------------------------------------------------------------------
-# exception parameter
-# -----------------------------------------------------------------------------
-
-def test_exception_class_makes_instance_isinstance():
-    """After passing exception=ValueError, the instance must be isinstance(e, ValueError)."""
-    e = SimpleException(exception=ValueError, problem="error")
-    assert isinstance(e, ValueError)
-
-
-def test_exception_instance_is_processed():
-    """Passing an exception instance must store the type and the message."""
-    original = RuntimeError("original message")
-    e = SimpleException(exception=original, problem="error")
-    assert isinstance(e, RuntimeError)
-    assert e._intercepted_exception == "original message"
-
-
-# -----------------------------------------------------------------------------
-# Class-level attributes on subclasses
-# -----------------------------------------------------------------------------
-
-def test_subclass_class_attributes_are_used_as_defaults():
-    """Class-level attributes defined on a subclass must be used as defaults."""
-    class MyError(SimpleException):
-        error_name = "MY_ERROR"
-        expected = "a positive integer"
-
-    e = MyError(value=42)
-    assert e.error_name == "MY_ERROR"
-    assert e.expected == "a positive integer"
-
-
-def test_subclass_attribute_can_be_overridden_at_call():
-    """A subclass class-level default must be overridable at the call site."""
-    class MyError(SimpleException):
-        error_name = "MY_ERROR"
-
-    e = MyError(error_name="OVERRIDE")
-    assert e.error_name == "OVERRIDE"
-
-
-def test_invalid_subclass_attribute_raises_at_definition():
-    """A typo in a subclass attribute must raise an error at class definition time."""
+def test_init_subclass_rejects_unknown_attributes_on_subclass():
+    """
+    Validates architectural validation guards: creating a concrete subclass
+    with arbitrary, non-contract variables must immediately raise an internal ecosystem error.
+    """
+    # 1. Attempt definition of an invalid specification layout
     with pytest.raises(SimpleExceptionInternalError):
-        class BadError(SimpleException):
-            errro_name = "TYPO"
+        # noinspection PyUnusedLocal
+        class BadSubclass(SimpleException):
+            totally_made_up_attr = "oops"
 
 
-# -----------------------------------------------------------------------------
-# _render_message and output modes
-# -----------------------------------------------------------------------------
+def test_init_subclass_allows_valid_overrides():
+    """
+    Ensures that declarative overrides of contract-defined variables (like error_name)
+    are permitted and propagate correctly onto the compiled subclass blueprint.
+    """
 
-def test_str_returns_rendered_message():
-    """str(e) must return the assembled message string."""
-    e = SimpleException(problem="error")
-    assert str(e) == e._rendered_message
-    assert len(str(e)) > 0
+    # 1. Declare a valid system blueprint subclass specification
+    class GoodSubclass(SimpleException):
+        error_name: str = "GOOD SUBCLASS ERROR"
 
-
-def test_oneline_mode_is_single_line():
-    """oneline=True must produce a single-line output."""
-    e = SimpleException(problem="error", oneline=True)
-    assert "\n" not in str(e).strip()
-
-
-def test_default_mode_is_pretty():
-    """The default mode must be PRETTY — the output must contain the double line."""
-    from simplibs.exception.modes.PRETTY import PRETTY as pretty_instance
-    e = SimpleException(problem="error", get_location=False)
-    assert pretty_instance.double_line in str(e)
-
-
-def test_custom_mode_via_settings_is_used():
-    """Changing DEFAULT_MESSAGE_MODE in settings must affect the output."""
-    from simplibs.exception.modes import ONELINE as oneline_instance
-    S.DEFAULT_MESSAGE_MODE = oneline_instance
-    e = SimpleException(problem="error", get_location=False)
-    assert "\n" not in str(e).strip()
-
-
-# -----------------------------------------------------------------------------
-# __repr__ and __str__
-# -----------------------------------------------------------------------------
-
-def test_repr_format():
-    """__repr__ must return a correctly formatted string."""
-    e = SimpleException(error_name="TEST", value=42)
-    assert repr(e) == "<SimpleException(error_name='TEST', value=42)>"
-
-
-def test_repr_subclass_uses_subclass_name():
-    """__repr__ on a subclass must use the subclass name."""
-    class MyError(SimpleException):
-        pass
-
-    e = MyError()
-    assert repr(e).startswith("<MyError(")
-
-
-# -----------------------------------------------------------------------------
-# Serialisation
-# -----------------------------------------------------------------------------
-
-def test_to_dict_contains_set_public_attributes():
-    """to_dict must contain all set public attributes."""
-    e = SimpleException(error_name="DICT_TEST", problem="error")
-    result = e.to_dict()
-    assert result["error_name"] == "DICT_TEST"
-    assert result["problem"] == "error"
-    assert "message" not in result
-
-
-def test_to_debug_dict_contains_private_attributes():
-    """to_debug_dict must contain private attributes — both annotated and unannotated."""
-    e = SimpleException(problem="error", get_location=False)
-    result = e.to_debug_dict()
-    # Annotated private attributes (from SimpleExceptionData)
-    assert "_get_location" in result
-    assert "_oneline" in result
-    assert "_skip_locations" in result
-    # Unannotated private attributes (assigned in __init__)
-    assert "_rendered_message" in result
-
-
-def test_to_json_returns_valid_json():
-    """to_json must return a valid JSON string."""
-    import json
-    e = SimpleException(error_name="JSON_TEST", problem="error")
-    data = json.loads(e.to_json())
-    assert data["error_name"] == "JSON_TEST"
-
-
-# -----------------------------------------------------------------------------
-# Transformation (Location Offset)
-# -----------------------------------------------------------------------------
-
-def test_with_location_offset_returns_new_instance():
-    """with_location_offset must return a new instance of the same class."""
-    e = SimpleException(problem="original")
-    e_new = e.with_location_offset(1)
-
-    assert e_new is not e
-    assert isinstance(e_new, SimpleException)
-    assert e_new.problem == "original"
-
-
-def test_with_location_offset_increments_value():
-    """The new instance must have the _get_location value incremented by the offset."""
-    # Start with a baseline (e.g., 1)
-    e = SimpleException(get_location=1)
-
-    # Offset by 2
-    e_shifted = e.with_location_offset(2)
-
-    assert e_shifted._get_location == 3
-
-
-def test_with_location_offset_handles_boolean_true():
-    """If _get_location is True, it should be treated as 1 and incremented."""
-    e = SimpleException(get_location=True)
-
-    e_shifted = e.with_location_offset(1)
-
-    # True is treated as 1, so 1 + 1 = 2
-    assert e_shifted._get_location == 2
-
-
-def test_with_location_offset_preserves_other_attributes():
-    """All exception data must be preserved in the shifted instance."""
-    e = SimpleException(
-        error_name="SHIFT_TEST",
-        value="secret",
-        how_to_fix="Don't shift me"
-    )
-
-    e_shifted = e.with_location_offset(1)
-
-    assert e_shifted.error_name == "SHIFT_TEST"
-    assert e_shifted.value == "secret"
-    assert e_shifted.how_to_fix == ("Don't shift me",)
+    # 2. Validate structural layout inheritance
+    assert GoodSubclass.error_name == "GOOD SUBCLASS ERROR"

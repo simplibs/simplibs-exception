@@ -18,6 +18,8 @@ def process_skip_locations(
     """
     # 1. Normalize local input using our standard string collection normalizer
     normalized = normalize_strings(instance, value, "skip_locations") or ()
+    if isinstance(normalized, str):
+        normalized = (normalized,)
 
     # 2. Merge sequentially: local overrides + user global blacklists + system core filters
     # noinspection PyProtectedMember

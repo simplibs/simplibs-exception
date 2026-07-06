@@ -10,8 +10,23 @@ def print_problem(
     _oneline: bool = False,
 ) -> str | None:
     """
-    Renders the exception's problem statement. Supporting standard,
-    flat single-line layout, or machine-readable logfmt formatting.
+    Renders the exception's problem statement supporting standard multi-line, flat oneline, or logfmt formatting.
+
+    If the input value is empty or omitted, the function gracefully returns None.
+
+    Output Formats:
+        Standard Mode (Multi-line layout):
+            Structure: <PREFIX><PROBLEM_LINE_1><EMPTY_PREFIX><PROBLEM_LINE_2>...
+            Example:   Problem:   The database connection timed out after 5 seconds.
+                                  Please check your network configuration and try again.
+
+        Oneline Mode (_oneline=True):
+            Structure: <PREFIX><PROBLEM_LINE_1> <PROBLEM_LINE_2>...
+            Example:   Problem:   The database connection timed out after 5 seconds. Please check your network configuration and try again.
+
+        Log Mode (_log_mode=True):
+            Structure: problem='<PROBLEM_FLATTENED_WITH_SPACES>'
+            Example:   problem='The database connection timed out after 5 seconds. Please check your network configuration and try again.'
     """
     if not problem:
         return None

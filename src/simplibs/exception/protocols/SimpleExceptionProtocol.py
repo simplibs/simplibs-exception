@@ -40,22 +40,6 @@ class SimpleExceptionProtocol(SimpleExceptionDataProtocol, Protocol):
     def __str__(self) -> str: ...
 
     # -------------------------------------------------------------------------
-    # Serializers
-    # -------------------------------------------------------------------------
-
-    def to_dict(self) -> dict[str, Any]:
-        """Returns the public instance attributes as a dictionary — UNSET values are omitted."""
-        ...
-
-    def to_debug_dict(self) -> dict[str, Any]:
-        """Returns all instance attributes as a dictionary — including computed values."""
-        ...
-
-    def to_json(self) -> str:
-        """Returns the public instance attributes as a JSON string — UNSET values are omitted."""
-        ...
-
-    # -------------------------------------------------------------------------
     # Transformators
     # -------------------------------------------------------------------------
 

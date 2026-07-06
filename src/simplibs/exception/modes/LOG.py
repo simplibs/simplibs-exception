@@ -27,21 +27,35 @@ class LogMessage(ModeBase):
         Dynamically adapts and flattens all available exception fields into
         a single space-separated logfmt string.
 
-        ## Full output preview:
-        error=ERROR message='...' label='...' value='...' expected='...' problem='...' context='...' file='filename.py' line=42 how_to_fix='...'
+        The layout engine is fully elastic: it only renders key=value pairs for which
+        data has been explicitly provided, automatically skipping missing attributes. Fields
+        are structured into machine-readable tokens, eliminating vertical layouts and multi-line
+        stack traces for seamless log ingestion.
 
-        ## Field order
-        1. `error_name` + `label` — primary identification via `_print_intro_line`
-        2. `message` — free-form message
-        3. `expected` — description of the desired state
-        4. `Got` — the inspected value with its type
-        5. `problem` — description of the actual error
-        6. `context` — additional situational information
-        7. Location — file, line, and function info
+        Field Order (when fully populated):
+            1. Intro:        error='...' label='...'
+            2. Message:      message='...'
+            3. Expected:     expected='...'
+            4. Got & Type:   value='...' type='...'
+            5. Problem:      problem='...'
+            6. Context:      context='...'
+            7. File Info:    file='...' line=... function='...'
+            8. File Path:    path='...'
+
+        Output Layouts:
+
+            1. Empty Call / Absolute Minimum:
+            error='...' file='...' line=... function='...' path='...'
+
+            2. Message-Only Layout:
+            error='...' message='...' file='...' line=... function='...' path='...'
+
+            3. Full Structured Layout:
+            error='...' label='...' message='...' expected='...' value='...' type='...' problem='...' context='...' file='...' line=... function='...' path='...'
         """
         location = data.caller_info
 
-        lines = [
+        parts = [
             # 1. Primary identification header (error=... or error=... label=...)
             print_intro(data.error_name, data.label, _log_mode=True),
 
@@ -58,7 +72,7 @@ class LogMessage(ModeBase):
         ]
 
         # Join only active tokens into a perfectly flat, single-line log stream token row
-        return " ".join(line for line in lines if line)
+        return " ".join(part for part in parts if part)
 
 
 # Singleton mode instance

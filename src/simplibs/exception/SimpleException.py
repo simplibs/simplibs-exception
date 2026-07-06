@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 from simplibs.sentinels import UNSET, UnsetType
 # Inners
 from .SimpleExceptionData import SimpleExceptionData
@@ -61,7 +61,7 @@ class SimpleException(SimpleExceptionData, Exception):
 
         # --- Location metadata options ---
         self.get_location = process_get_location(get_location)
-        self.skip_locations = process_skip_locations(skip_locations)
+        self.skip_locations = process_skip_locations(self, skip_locations)
 
         # --- Layout overrides ---
         self.oneline = normalize_bool(self, oneline, "oneline")
@@ -79,13 +79,15 @@ class SimpleException(SimpleExceptionData, Exception):
     def __new__(
         cls,
         *args: Any,
-        exception: type[Exception] | UnsetType = UNSET,
+        exception: type[Exception] | None = None,
         **kwargs: Any
     ) -> "SimpleExceptionProtocol":
         """
         Dynamically injects a foreign exception type into the class ancestors (MRO) if provided.
         """
-        return add_exception_type(cls, exception)
+        resolved_cls = add_exception_type(cls, exception)
+        # noinspection PyTypeChecker
+        return super().__new__(resolved_cls)
 
     def __init_subclass__(
         cls,

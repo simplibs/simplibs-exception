@@ -1,0 +1,1794 @@
+src/simplibs/exception/_core_logic/internal_exceptions/SimpleExceptionInternalError.py
+@dataclass
+class SimpleExceptionInternalError(SimpleExceptionData, Exception):
+    """Internal library exception — no validation, direct output only."""
+
+    # Core identification override
+    error_name: str = "INTERNAL ERROR"
+
+    def __post_init__(self):
+        # 1. Render the message via PRETTY mode singleton
+        from ...modes import PRETTY
+
+        rendered_message = PRETTY.render(self, validate=False)
+
+        # 2. Pass the formatted message to the native Exception layer.
+        # Calling Exception.__init__ directly guarantees that even with dynamic
+        # multi-inheritance shifts, the core string remains uncorrupted.
+        Exception.__init__(self, rendered_message)
+
+src/simplibs/exception/_core_logic/internal_exceptions/SimpleExceptionModeError.py
+@dataclass
+class SimpleExceptionModeError(SimpleExceptionInternalError):
+    """Raised when the framework formatting mode encounters an invalid data interface contract."""
+    error_name: str = "MODE ERROR"
+
+src/simplibs/exception/_core_logic/internal_exceptions/SimpleExceptionSettingsError.py
+@dataclass
+class SimpleExceptionSettingsError(SimpleExceptionInternalError):
+    """Raised when the global settings configuration encounters invalid options or invalid types."""
+    error_name: str = "SETTINGS ERROR"
+
+src/simplibs/exception/_core_logic/lifecycle/init_subclass/_type_matches.py
+def _type_matches(
+    value: object,
+    typ: type
+) -> bool:
+    """
+    Recursively checks whether a value matches a (possibly parameterized) type.
+
+    Handles:
+        - Any                          -> always matches
+        - X | Y / Union[X, Y]          -> matches if any member matches
+        - tuple[str, ...], list[X]...  -> checked only against the origin
+                                           container (e.g. tuple), not the
+                                           inner element types
+        - plain types                  -> standard isinstance check
+    """
+
+    # 1. Any takes precedence — always matches, no further check needed
+    if typ is Any:
+        return True
+
+    # 2. Handle parameterized types
+    origin = get_origin(typ)
+    if origin is not None:
+
+        # 2.1 Recursively check a union type
+        if origin is UnionType or origin is Union:
+            return any(
+                _type_matches(value, arg)
+                for arg in get_args(typ)
+            )
+
+        # 2.2 Check a simple parameterized type against its origin container
+        # noinspection PyTypeChecker
+        return isinstance(value, origin)
+
+    # 3. Handle a plain, non-parameterized type
+    return isinstance(value, typ)
+
+src/simplibs/exception/_core_logic/lifecycle/init_subclass/check_children_attributes.py
+def check_children_attributes(
+    parent_class: type,
+    child_class: type
+) -> None:
+    """
+    Verifies that a subclass contains no unknown attributes and that their types
+    match those declared in the parent class.
+
+    Args:
+        parent_class: The parent class whose annotations serve as the source of truth.
+        child_class:  The subclass being validated.
+
+    Raises:
+        SimpleExceptionInternalError: If the subclass contains unknown attributes
+                                       or attributes with incorrect types.
+    """
+    # 1. Parent annotations — public only, serve as the source of truth for both checks
+    parent_annotations = {
+        name: typ
+        for name, typ in parent_class.__annotations__.items()
+        if not name.startswith("_")
+    }
+
+    # 2. Subclass attributes — public only
+    child_values = {
+        name: getattr(child_class, name)
+        for name in child_class.__dict__
+        if not name.startswith("_")
+    }
+
+    # 3. Check for unknown attributes
+    extra_keys = [k for k in child_values if k not in parent_annotations]
+    if extra_keys:
+        unused_keys = [k for k in parent_annotations if k not in child_values]
+        raise SimpleExceptionInternalError(
+            value=extra_keys,
+            label=f"class '{child_class.__name__}'",
+            expected=f"only attributes defined in '{parent_class.__name__}': {list(parent_annotations)}",
+            problem="class contains unknown attributes — likely a typo",
+            context=f"parent attributes not defined in subclass: {unused_keys}" if unused_keys else "",
+            how_to_fix=(
+                "Check for typos in the attribute names.",
+                f"Permitted attributes are: {list(parent_annotations)}",
+            ),
+        )
+
+    # 4. Type check
+    type_errors = {
+        name: {
+            "value": val,
+            "value_type": type(val).__name__,
+            "expected_type": typ.__name__ if hasattr(typ, "__name__") else str(typ),
+        }
+        for name, val in child_values.items()
+        if not _type_matches(val, (typ := parent_annotations[name]))
+    }
+
+    if type_errors:
+        first_name, first_error = next(iter(type_errors.items()))
+        raise SimpleExceptionInternalError(
+            value=first_error["value"],
+            label=f"'{first_name}' in class '{child_class.__name__}'",
+            expected=first_error["expected_type"],
+            problem=f"attribute has incorrect type — {len(type_errors)} error(s) found: {list(type_errors)}",
+            how_to_fix=(
+                f"Fix the type of attribute '{first_name}' to '{first_error['expected_type']}'.",
+                "All attributes with type errors are listed in 'problem'.",
+            ),
+        )
+
+src/simplibs/exception/_core_logic/lifecycle/init_utils/assemble_message.py
+def assemble_message(
+    instance: "SimpleExceptionDataProtocol",
+    oneline: bool
+) -> str:
+    """
+    Evaluates configuration flags and dispatches the exception data to the
+    active rendering engine mode to build the final string message.
+    """
+    # 1. If oneline mode is requested, intercept and use the specialized ONELINE mode
+    if oneline:
+        from ....modes import ONELINE  # Local import prevents circular dependency
+        return ONELINE.render(instance, validate=False)
+
+    # 2. Otherwise, fall back to the globally configured message mode from settings
+    return S.MESSAGE_MODE.render(instance, validate=False)
+
+src/simplibs/exception/_core_logic/lifecycle/init_utils/normalize_bool.py
+def normalize_bool(
+    instance: "SimpleExceptionDataProtocol",
+    value: Any,
+    attr: str,
+) -> bool:
+    """
+    Validates that the value is a boolean. If not, falls back to the
+    class-level default for the given attribute.
+    """
+    return (
+        value if isinstance(value, bool)
+        else bool(getattr(instance.__class__, attr, False))
+    )
+
+
+src/simplibs/exception/_core_logic/lifecycle/init_utils/normalize_exception.py
+def normalize_exception(
+    instance: "SimpleExceptionDataProtocol",
+    value: Any,
+    attr: str = "exception"
+) -> Any:
+    """
+    Validates that the value is either an exception instance or an exception class.
+    Falls back to the class-level default if invalid.
+    """
+    # 1. Scénář: Je to instance výjimky (např. passed z 'except Exception as e')
+    if isinstance(value, Exception):
+        return value
+
+    # 2. Scénář: Je to třída výjimky (např. exception=ValueError)
+    if isclass(value) and issubclass(value, Exception):
+        return value
+
+    # 3. Fallback: Cokoliv jiného (UNSET, string, int...) vrátí default z třídy
+    return getattr(instance.__class__, attr, None)
+
+src/simplibs/exception/_core_logic/lifecycle/init_utils/normalize_string.py
+def normalize_string(
+    instance: "SimpleExceptionDataProtocol",
+    value: Any,
+    attr: str,
+) -> Any:
+    """
+    Validates that the value is a string. If not, falls back to the
+    class-level default for the given attribute.
+    """
+    return (
+        value if isinstance(value, str)
+        else getattr(instance.__class__, attr, None)
+    )
+
+src/simplibs/exception/_core_logic/lifecycle/init_utils/normalize_strings.py
+def normalize_strings(
+    instance: "SimpleExceptionDataProtocol",
+    value: Any,
+    attr: str
+) -> tuple[str, ...] | str | None:
+    """
+    Processes a descriptive parameter (problem, context, how_to_fix) provided
+    as a str, tuple, or list, and normalizes it into a flat str or a tuple[str, ...].
+    """
+    # 1. Process a string (return instantly as a flat single-line string)
+    if isinstance(value, str):
+        return value
+
+    # 2. Process a tuple or list — retains only non-empty, stripped str items
+    if isinstance(value, (tuple, list)):
+        strings = [i for i in value if isinstance(i, str) and i.strip()]
+        if strings:
+            # Optimization: If the collection contains only one line, flatten it to str
+            return strings[0] if len(strings) == 1 else tuple(strings)
+
+    # 3. Fall back to the class-level default for the given attribute
+    return getattr(instance.__class__, attr, None)
+
+src/simplibs/exception/_core_logic/lifecycle/init_utils/process_get_location.py
+def process_get_location(
+    value: Any,
+) -> int | bool:
+    """
+    Processes the get_location parameter — returns the value or the settings default.
+
+    Args:
+        value: The provided value of the get_location parameter.
+
+    Returns:
+        int or bool — from the provided value, or S.GET_LOCATION.
+    """
+    if isinstance(value, (int, bool)):
+        return value
+    return S.GET_LOCATION
+
+src/simplibs/exception/_core_logic/lifecycle/init_utils/process_skip_locations.py
+def process_skip_locations(
+    instance: "SimpleExceptionDataProtocol",
+    value: Any,
+) -> tuple[str, ...]:
+    """Processes the skip_locations parameter, normalizes it via normalize_strings,
+
+    and merges it sequentially with the global user blacklist and system protected frames.
+    """
+    # 1. Normalize local input using our standard string collection normalizer
+    normalized = normalize_strings(instance, value, "skip_locations") or ()
+
+    # 2. Merge sequentially: local overrides + user global blacklists + system core filters
+    # noinspection PyProtectedMember
+    return normalized + S.LOCATION_BLACKLIST + S._SYSTEM_BLACKLIST
+
+
+src/simplibs/exception/_core_logic/lifecycle/new_method/add_exception_type.py
+def add_exception_type(
+    cls,
+    exception: type[Exception] | UnsetType = UNSET,
+):
+    """
+    Dynamically adds an exception type to the class ancestors if one is provided.
+
+    Args:
+        cls: The target exception class blueprint acting as the primary host.
+        exception: The exception class to be added to the ancestors,
+                   or an exception instance (edge case).
+
+    Returns:
+        A new instance — either of the original class, or of a dynamically
+        created class that includes the exception type in its ancestors.
+    """
+    # 1. Load the class-level default if no exception was passed
+    if exception is UNSET:
+        exception = getattr(cls, "exception", UNSET)
+
+    # 2. Still UNSET — no exception was provided or defined on the class, proceed without one
+    if exception is UNSET:
+        return super().__new__(cls)
+
+    # 3. Edge case — an instance was passed instead of a class (necessary guard before __init__)
+    if isinstance(exception, Exception):
+        exception = type(exception)
+
+    # 4. The class already includes the exception type — adding it would be redundant
+    # noinspection PyTypeChecker
+    if issubclass(cls, exception):
+        # noinspection PyTypeChecker
+        return super().__new__(cls)
+
+    # 5. Create the dynamic class and store it in the cache if not already present
+    cache_key = (cls, exception)
+    # noinspection PyProtectedMember
+    dynamic_cls_cache = S._dynamic_cls_cache
+    if cache_key not in dynamic_cls_cache:
+        # noinspection PyTypeChecker
+        dynamic_cls_cache[cache_key] = cast(
+            type[BaseException],
+            type(cls.__name__, (cls, exception), {})
+        )
+
+    # 6. Return an instance of the dynamically created class from the cache
+    # noinspection PyTypeChecker
+    cached_cls = dynamic_cls_cache[cache_key]
+    return cached_cls.__new__(cached_cls)
+
+src/simplibs/exception/_core_logic/serializations/to_debug_dict.py
+def to_debug_dict(
+    self: "SimpleExceptionDataProtocol"
+) -> dict[str, Any]:
+    """
+    Compiles a comprehensive diagnostic snapshot dictionary for developers.
+    Extends standard data with fully realized runtime frames and rendered outputs.
+    """
+    # 1. Establish foundation using the standard public serialization
+    result = to_dict(self)
+
+    # 2. Inject lazy-loaded, structural location footprint metadata
+    # (Extracts file, path, line, function from the dynamic execution context)
+    if self.caller_info:
+        result["caller_info"] = self.caller_info
+
+    # 3. Inject underlying intercepted trace summaries if active
+    if self.intercepted_exception:
+        result["intercepted_exception"] = self.intercepted_exception
+
+    # 4. Inject the absolute compiled console layout output representation string
+    # (Safe-guarding via getattr in case serialization executes pre-initialization)
+    rendered_msg = getattr(self, "rendered_message", None)
+    if rendered_msg:
+        result["rendered_message"] = rendered_msg
+
+    return result
+
+src/simplibs/exception/_core_logic/serializations/to_dict.py
+def to_dict(
+    self: "SimpleExceptionDataProtocol"
+) -> dict[str, Any]:
+    """
+    Serializes core public exception attributes into a clean dictionary.
+    Omitted any unconfigured (UNSET) values, configurations, and location metadata.
+    """
+    # Explicit definition of public business-logic attributes
+    candidates = {
+        "error_name": self.error_name,
+        "label": self.label,
+        "message": self.message,
+        "expected": self.expected,
+        "value": self.value,
+        "problem": self.problem,
+        "context": self.context,
+        "how_to_fix": self.how_to_fix,
+    }
+
+    # Filter out UNSET values dynamically
+    return {key: val for key, val in candidates.items() if val is not UNSET}
+
+
+src/simplibs/exception/_core_logic/settings_meta/validations/raise_system_blacklist_mutation_error.py
+def raise_system_blacklist_mutation_error(
+    value: Any
+) -> NoReturn:
+    """Explicitly raises an error when an attempt is made to mutate the internal read-only system blacklist."""
+    raise SimpleExceptionSettingsError(
+        value=value,
+        label="SimpleExceptionSettings",
+        problem="The protected '_SYSTEM_BLACKLIST' attribute is strict read-only metadata.",
+        how_to_fix=(
+            "Do not attempt to alter the core framework system-level blacklist.",
+            "To skip your custom repository paths or wrapper files, append them to: "
+            "SimpleExceptionSettings.LOCATION_BLACKLIST",
+        ),
+    )
+
+src/simplibs/exception/_core_logic/settings_meta/validations/raise_unknown_settings_attribute_error.py
+def raise_unknown_settings_attribute_error(
+    cls: "SettingsMeta",
+    name: str
+) -> NoReturn:
+    """Explicitly raises an error when an unauthorized or typo-polluted attribute name is assigned to Settings."""
+    permitted_keys = [k for k in cls._VALIDATORS if not k.startswith("_")]
+
+    raise SimpleExceptionSettingsError(
+        value=name,
+        label="SimpleExceptionSettings",
+        expected=f"one of the permitted attributes: {permitted_keys}",
+        problem="unknown attribute — likely a typo or a new attribute missing its validator",
+        how_to_fix=(
+            "Check for a typo — the permitted operational attributes are listed under 'Expected'.",
+            "If introducing a new setting, register its corresponding validation block inside _VALIDATORS.",
+        ),
+    )
+
+src/simplibs/exception/_core_logic/settings_meta/validations/validate_dynamic_cls_cache.py
+def validate_dynamic_cls_cache(value: Any) -> None:
+    """Verifies that the value is an empty dict — only allowed for cache reset."""
+    if value != {}:
+        raise SimpleExceptionSettingsError(
+            value=value,
+            label="_dynamic_cls_cache",
+            expected="an empty dict {} — for configuration and state reset routines only",
+            problem="the multi-inheritance class cache is handled internally and cannot be manually overwritten",
+            how_to_fix=(
+                "To wipe the framework runtime state safely, invoke: SimpleExceptionSettings.reset()",
+                "To clear this cache manually during hot-reloads or tests, assign an empty dict: "
+                "SimpleExceptionSettings._dynamic_cls_cache = {}",
+            ),
+        )
+
+src/simplibs/exception/_core_logic/settings_meta/validations/validate_get_location.py
+def validate_get_location(
+    value: Any
+) -> None:
+    """Verifies that the value is an int or bool."""
+    if not isinstance(value, (int, bool)):
+        raise SimpleExceptionSettingsError(
+            value=value,
+            label="GET_LOCATION",
+            expected="int or bool (e.g., True, False, 1, 2)",
+            problem="value is neither a boolean nor an integer",
+            how_to_fix=(
+                "Pass True or False to enable or disable location reporting.",
+                "Pass a positive int to set the stack depth traversal limit (e.g., 1, 2).",
+            ),
+        )
+
+src/simplibs/exception/_core_logic/settings_meta/validations/validate_location_blacklist.py
+def validate_location_blacklist(
+    value: Any
+) -> None:
+    """Verifies that the value is a tuple containing only strings."""
+    # 1. Verify that the provided value is a tuple
+    if not isinstance(value, tuple):
+        raise SimpleExceptionSettingsError(
+            value=value,
+            label="LOCATION_BLACKLIST",
+            expected="tuple[str, ...] — a tuple of strings containing filename patterns",
+            problem="value is not a tuple",
+            how_to_fix=(
+                "Wrap the value in a tuple: ('filename.py',)",
+                "To set an empty blacklist use an empty tuple: ()",
+            ),
+        )
+
+    # 2. Verify the items inside the tuple
+    bad_items = [i for i in value if not isinstance(i, str)]
+    if bad_items:
+        raise SimpleExceptionSettingsError(
+            value=bad_items,
+            label="LOCATION_BLACKLIST",
+            expected="a tuple containing only string elements",
+            problem=f"tuple contains invalid non-string elements (found {len(bad_items)} invalid item(s))",
+            how_to_fix=(
+                "Check all items — each one must be a string (str).",
+                "Each item defines a file name pattern that will be skipped during location resolution.",
+            ),
+        )
+
+src/simplibs/exception/_core_logic/settings_meta/validations/validate_message_mode.py
+def validate_message_mode(value: Any) -> None:
+    """Verifies that the value is an instance of a class derived from ModeBase."""
+    if not isinstance(value, ModeBase):
+        raise SimpleExceptionSettingsError(
+            value=value,
+            label="MESSAGE_MODE",
+            expected="an instance of a class derived from ModeBase (e.g., PRETTY, SIMPLE, ONELINE, LOG)",
+            problem="value is not a valid framework output mode configuration",
+            how_to_fix=(
+                "Use one of the pre-configured built-in singletons: PRETTY, SIMPLE, ONELINE, LOG.",
+                "If building a custom formatting engine, ensure it inherits strictly from ModeBase.",
+            ),
+        )
+
+src/simplibs/exception/_core_logic/settings_meta/validations/validate_value_truncation_length.py
+def validate_value_truncation_length(value: Any) -> None:
+    """Verifies that the value is a positive integer.
+
+    Raises:
+        SimpleExceptionSettingsError: If value is not a positive int.
+    """
+    # 1. Verify that the value is an integer (and strictly not a boolean)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise SimpleExceptionSettingsError(
+            value=value,
+            label="VALUE_TRUNCATION_LENGTH",
+            expected="a positive integer (e.g., 50, 100, 200)",
+            problem="value is not an integer",
+            how_to_fix=(
+                "Pass an integer value — e.g., 100, 200, 500.",
+                "This value controls how many characters to show before truncating large values.",
+            ),
+        )
+
+    # 2. Verify that the number is positive
+    if value <= 0:
+        raise SimpleExceptionSettingsError(
+            value=value,
+            label="VALUE_TRUNCATION_LENGTH",
+            expected="a positive integer greater than 0",
+            problem="value is zero or negative",
+            how_to_fix=(
+                "Pass a value greater than 0 — e.g., 50, 100.",
+                "Recommended: 50-200 depending on your terminal width and layout preference.",
+            ),
+        )
+
+src/simplibs/exception/_core_logic/settings_meta/SettingsMeta.py
+class SettingsMeta(type):
+    """Metaclass for validating attribute assignments on SimpleExceptionSettings."""
+
+    # --- Mapping of attribute names to their validators ---
+    _VALIDATORS: dict[str, Callable[[Any], None]] = {
+        "GET_LOCATION": validate_get_location,
+        "LOCATION_BLACKLIST": validate_location_blacklist,
+        "MESSAGE_MODE": validate_message_mode,
+        "VALUE_TRUNCATION_LENGTH": validate_value_truncation_length,
+        "_dynamic_cls_cache": validate_dynamic_cls_cache,
+    }
+
+    # --- Setter that intercepts and validates all configuration modifications ---
+    def __setattr__(
+        cls,
+        name: str,
+        value: Any
+    ) -> None:
+        # 1. Strict guard against modifying protected system metadata
+        if name == "_SYSTEM_BLACKLIST":
+            raise_system_blacklist_mutation_error(value)
+
+        # 2. Verify that the attribute is known and permitted
+        if name not in cls._VALIDATORS:
+            raise_unknown_settings_attribute_error(cls, name)
+
+        # 3. Fire the designated contextual validation algorithm
+        cls._VALIDATORS[name](value)
+
+        # 4. Commit the validated payload back into the core namespace memory stream
+        super().__setattr__(name, value)
+
+src/simplibs/exception/_core_logic/tracing/extract_caller_info.py
+# noinspection PyBroadException
+def extract_caller_info(
+    expected_frames: int = 1,
+    excluded_patterns: tuple[str, ...] = (),
+) -> dict[str, Any] | None:
+    """Walks the call stack and returns info about the requested relevant frame.
+
+    Args:
+        expected_frames:    Which valid frame to return (1 = first non-excluded).
+        excluded_patterns:  Fully compiled tuple of strings that, if found in a
+                            file path, cause that frame to be skipped.
+
+    Returns:
+        A dictionary with keys: file, path, line, function — or None on failure.
+    """
+    try:
+        # 1. Load the stack (context=0 is a strict performance optimization avoiding disk I/O)
+        stack = inspect.stack(context=0)
+        if not stack:
+            return None
+
+        # 2. Normalize all excluded patterns to POSIX paths. Safely handles any iterable sequence.
+        excluded = set()
+        if excluded_patterns:
+            excluded.update(Path(p).as_posix() for p in excluded_patterns)
+
+        # 3. Initialize loop variables
+        final_frame = None
+        valid_count = 0
+
+        # 4. Walk the stack (starting from index 1 to skip this utility frame itself)
+        for frame in stack[1:]:
+            # 4.1 Keep track of the current frame as a fallback "safety net"
+            final_frame = frame
+
+            # 4.2 Normalize the frame path to POSIX for cross-platform matching
+            normalized_path = Path(frame.filename).as_posix()
+
+            # 4.3 Check if the frame's path contains any blacklisted patterns
+            if not any(p in normalized_path for p in excluded):
+                # 4.4 Increment the counter of valid (non-excluded) frames
+                valid_count += 1
+
+                # 4.5 Check if we reached the requested frame number
+                if valid_count == expected_frames:
+                    break  # Target found
+
+        # 5. Build and return the result dictionary from the chosen frame context
+        if final_frame:
+            return {
+                "file": os.path.basename(final_frame.filename),
+                "path": final_frame.filename,
+                "line": final_frame.lineno,
+                "function": final_frame.function,
+            }
+
+        return None
+
+    except Exception:
+        # Diagnostic utility must never cause a crash.
+        # It degrades gracefully to None on any error.
+        # Implements the absolute "Do no harm" architectural directive.
+        return None
+
+src/simplibs/exception/_core_logic/tracing/with_location_offset.py
+def with_location_offset(
+    instance: "SimpleExceptionProtocol",
+    offset: int = 1
+) -> "SimpleExceptionProtocol":
+    """
+    Creates a new exception instance with increased get_location depth.
+
+    Use this when you're re-raising an exception from a wrapper function
+    and want to skip the wrapper to show the original caller.
+    """
+    # 1. Compute new depth safely handling both integer offsets and boolean triggers
+    if isinstance(instance.get_location, bool):
+        # If True (1), adds offset (e.g., 1 + 1 = 2). If False, remains False.
+        new_get_location = (
+            (instance.get_location + offset) if instance.get_location else False
+        )
+    else:
+        # If it's already a specific integer depth, just advance it forward
+        new_get_location = instance.get_location + offset
+
+    # 2. Use the current class type (supports dynamic MRO inheritance automatically)
+    cls = type(instance)
+
+    # 3. Create a new instance with the identical payload data but an advanced location target
+    new_exc = cls(
+        message=instance.message,
+        value=instance.value,
+        label=instance.label,
+        expected=instance.expected,
+        problem=instance.problem,
+        context=instance.context,
+        how_to_fix=instance.how_to_fix,
+        error_name=instance.error_name,
+        exception=instance.exception,
+        get_location=new_get_location,
+        skip_locations=instance.skip_locations,
+        oneline=instance.oneline,
+    )
+
+    # 4. Return new instance (the internal core will re-render the message at the new frame depth)
+    return new_exc
+
+src/simplibs/exception/modes/base_class/ModeBase.py
+class ModeBase(ABC):
+    """
+    Base class for all SimpleException output modes.
+
+    Implements the Template Method pattern to enforce a unified public API
+    with built-in validation, while delegating the layout logic to subclasses.
+    """
+
+    @abstractmethod
+    def _render(self, data: "SimpleExceptionDataProtocol") -> str:
+        """
+        Internal abstract method. Must be implemented by concrete subclasses
+        (e.g., PrettyMode, OnelineMode) to define their unique layout.
+        """
+        pass
+
+    def render(
+        self,
+        data: "SimpleExceptionDataProtocol",
+        *,
+        validate: bool = True
+    ) -> str:
+        """
+        Public entry point for rendering exception data into a formatted string.
+
+        Handles structural validation and dispatches the data to the concrete
+        layout implementation.
+        """
+        # 1. Optional data structure validation
+        if validate:
+            if not hasattr(data, "message") or not hasattr(data, "error_name"):
+                raise SimpleExceptionModeError(
+                    value=data,
+                    label="data",
+                    expected="an object satisfying SimpleExceptionDataProtocol",
+                    problem="the provided object does not match the expected exception data structure",
+                    how_to_fix=(
+                        "Pass an instance of SimpleExceptionData or any object implementing its protocol.",
+                        "For trusted internal calls, use validate=False to skip this check.",
+                    ),
+                )
+
+        # 2. Delegate the actual layout rendering to the concrete subclass
+        return self._render(data)
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__} mode>"
+
+src/simplibs/exception/modes/printers/dividers/DOT_PREFIX.py
+DOT_PREFIX = "\n     • "
+
+src/simplibs/exception/modes/printers/dividers/DOUBLE_LINE.py
+DOUBLE_LINE = "═" * 65
+
+src/simplibs/exception/modes/printers/dividers/EMPTY_PREFIX.py
+EMPTY_PREFIX = "\n           "
+
+src/simplibs/exception/modes/printers/dividers/SINGLE_LINE.py
+SINGLE_LINE = "─" * 65
+
+src/simplibs/exception/modes/printers/exception_info/print_expected.py
+def print_expected(
+    expected: str | None,
+    *,
+    prefix: str = "Expected:  ",
+    _log_mode: bool = False
+) -> str | None:
+    """
+    Renders the descriptive expectation threshold (what the system actually anticipated).
+    """
+    if not expected:
+        return None
+
+    # 1. LOG MODE: Secure string representation for centralized logging
+    if _log_mode:
+        return f"expected={expected!r}"
+
+    # 2. STANDARD MODE: Human-friendly literal rendering with a fixed prefix margin
+    return prefix + expected
+
+src/simplibs/exception/modes/printers/exception_info/print_message.py
+def print_message(
+    message: str | None,
+    *,
+    prefix: str = "Message:   ",
+    _log_mode: bool = False
+) -> str | None:
+    """
+    Renders the primary human-readable message string explaining the exception context.
+    """
+    if not message:
+        return None
+
+    # 1. LOG MODE: Secure string representation for log aggregators
+    if _log_mode:
+        return f"message={message!r}"
+
+    # 2. STANDARD MODE: Human-friendly literal message rendering with a fixed prefix margin
+    return prefix + message
+
+src/simplibs/exception/modes/printers/exception_info/print_value_with_type.py
+def print_value_with_type(
+    value: Any,
+    max_length: int | None = None,
+    *,
+    prefix: str = "Got:       ",
+    _log_mode: bool = False
+) -> str | None:
+    """
+    Renders the runtime value along with its data type wrapper.
+    Handles data truncation gracefully based on global or local length constraints.
+    """
+    # 1. Short-circuit if the value was never supplied
+    if value is UNSET:
+        return None
+
+    # 2. Extract the safe evaluation representation
+    repr_str = repr(value)
+
+    # 3. Fallback to global application configuration if local override is omitted
+    if max_length is None:
+        from ....SimpleExceptionSettings import SimpleExceptionSettings as S
+        max_length = S.VALUE_TRUNCATION_LENGTH
+
+    # 4. Truncation engine execution
+    is_truncated = len(repr_str) > max_length
+    if is_truncated:
+        truncated_chars = len(repr_str) - max_length
+        repr_str = (
+            repr_str[:max_length] +
+            f"... [truncated, {truncated_chars} chars]"
+        )
+
+    # 5. LOG MODE: Build safe key-value attributes for indexers
+    if _log_mode:
+        # If truncated, the string now contains plain text modifiers and spaces.
+        # We must re-wrap with !r to guarantee valid token encapsulation.
+        # Otherwise, the clean repr_str already possesses structural quotes.
+        final_val = repr_str if not is_truncated else f"{repr_str!r}"
+        return f"value={final_val} type={type(value).__name__}"
+
+    # 6. STANDARD MODE: Human-focused presentation string containing explicit type markers
+    return f"{prefix}{repr_str} ({type(value).__name__})"
+
+src/simplibs/exception/modes/printers/exception_info_multiline/print_context.py
+def print_context(
+    context: tuple[str, ...] | str | None,
+    *,
+    prefix: str = "Context:   ",
+    _log_mode: bool = False,
+    _oneline: bool = False,
+) -> str | None:
+    """
+    Renders the exception's context. Supporting standard,
+    flat single-line layout, or machine-readable logfmt formatting.
+    """
+    if not context:
+        return None
+
+    # --- FAST PATH: Optimize for primitive flat string inputs ---
+    if isinstance(context, str):
+        if _log_mode:
+            return f"context={context!r}"
+        return prefix + context
+
+    # --- STANDARD PATH: Process multi-line collections (tuple) ---
+    # 1. LOG MODE: Flatten all lines into a single string for machine processing
+    if _log_mode:
+        flat_context = " ".join(context)
+        return f"context={flat_context!r}"
+
+    # 2. ONELINE MODE: Inline all items separated by spaces, ignoring vertical margins
+    if _oneline:
+        return prefix + " ".join(context)
+
+    # 3. STANDARD MODE: Inline first item, align subsequent items via EMPTY_PREFIX
+    first_line = context[0]
+    remaining_lines = context[1:]
+
+    if not remaining_lines:
+        return prefix + first_line
+
+    return prefix + first_line + EMPTY_PREFIX + EMPTY_PREFIX.join(remaining_lines)
+
+
+src/simplibs/exception/modes/printers/exception_info_multiline/print_problem.py
+def print_problem(
+    problem: tuple[str, ...] | str | None,
+    *,
+    prefix: str = "Problem:   ",
+    _log_mode: bool = False,
+    _oneline: bool = False,
+) -> str | None:
+    """
+    Renders the exception's problem statement. Supporting standard,
+    flat single-line layout, or machine-readable logfmt formatting.
+    """
+    if not problem:
+        return None
+
+    # --- FAST PATH: Optimize for primitive flat string inputs ---
+    if isinstance(problem, str):
+        if _log_mode:
+            return f"problem={problem!r}"
+        return prefix + problem
+
+    # --- STANDARD PATH: Process multi-line collections (tuple) ---
+    # 1. LOG MODE: Flatten all lines into a single string for machine processing
+    if _log_mode:
+        flat_problem = " ".join(problem)
+        return f"problem={flat_problem!r}"
+
+    # 2. ONELINE MODE: Inline all items separated by spaces, ignoring vertical margins
+    if _oneline:
+        return prefix + " ".join(problem)
+
+    # 3. STANDARD MODE: Inline first item, align subsequent items via EMPTY_PREFIX
+    first_line = problem[0]
+    remaining_lines = problem[1:]
+
+    if not remaining_lines:
+        return prefix + first_line
+
+    return prefix + first_line + EMPTY_PREFIX + EMPTY_PREFIX.join(remaining_lines)
+
+
+src/simplibs/exception/modes/printers/file_info/print_file_info.py
+def print_file_info(
+    caller_info: dict | None,
+    *,
+    prefix: str = "File info: ",
+    _log_mode: bool = False
+) -> str | None:
+    """
+    Renders standard file metadata including filename, line number, and function name.
+    Safely skips internal dynamic execution frames.
+    """
+    if not caller_info:
+        return None
+
+    file = caller_info["file"]
+
+    # If it is a dynamic or internal Python evaluation frame, skip the line entirely
+    if file.startswith("<"):
+        return None
+
+    line = caller_info["line"]
+    function = caller_info["function"]
+
+    # 1. LOG MODE: Structured, space-separated attributes for logging frameworks
+    if _log_mode:
+        return f"file={file!r} line={line} function={function!r}"
+
+    # 2. STANDARD MODE: Clean, human-readable layout separated by vertical pipes
+    return f"{prefix}{file} | line: {line} | function: {function}"
+
+
+src/simplibs/exception/modes/printers/file_info/print_file_path.py
+def print_file_path(
+    caller_info: dict | None,
+    *,
+    prefix: str = "File path: ",
+    _log_mode: bool = False
+) -> str | None:
+    """
+    Renders the absolute or full filesystem path of the file where the exception was raised.
+    Safely skips internal dynamic execution frames.
+    """
+    if not caller_info:
+        return None
+
+    path = caller_info["path"]
+
+    # If it is a dynamic or internal Python evaluation frame, skip the line entirely
+    if path.startswith("<"):
+        return None
+
+    # 1. LOG MODE: Secure string representation handling directory slashes
+    if _log_mode:
+        return f"path={path!r}"
+
+    # 2. STANDARD MODE: Human-friendly literal file path rendering
+    return prefix + path
+
+
+src/simplibs/exception/modes/printers/hepl_info_multiline/print_how_to_fix.py
+def print_how_to_fix(
+    how_to_fix: tuple[str, ...] | str | None,
+    *,
+    prefix: str = "🔧 How to fix:",
+    _log_mode: bool = False,
+    _oneline: bool = False,
+) -> str | None:
+    """
+    Renders actionable mitigation steps to resolve the exception. Supporting standard
+    multi-line checklists, flat single-line rows, or machine-readable logfmt.
+    """
+    if not how_to_fix:
+        return None
+
+    # --- FAST PATH: Optimize for primitive flat string inputs ---
+    if isinstance(how_to_fix, str):
+        if _log_mode:
+            return f"how_to_fix={how_to_fix!r}"
+        if _oneline:
+            return prefix + " " + how_to_fix
+        return prefix + DOT_PREFIX + how_to_fix
+
+    # --- STANDARD PATH: Process multi-line collections (tuple) ---
+    # 1. LOG MODE: Flatten all checklist steps into a single machine-safe token
+    if _log_mode:
+        flat_fix = " ".join(how_to_fix)
+        return f"how_to_fix={flat_fix!r}"
+
+    # 2. ONELINE MODE: Inline all items separated by spaces, removing vertical bullets
+    if _oneline:
+        return prefix + " " + " ".join(how_to_fix)
+
+    # 3. STANDARD MODE: Rich vertical bulleted list layout
+    return prefix + DOT_PREFIX + DOT_PREFIX.join(how_to_fix)
+
+
+src/simplibs/exception/modes/printers/hepl_info_multiline/print_intercepted_exception.py
+def print_intercepted_exception(
+    exception: Any,
+    *,
+    prefix: str = "Intercepted exception",
+    _log_mode: bool = False,
+    _oneline: bool = False,
+) -> str | None:
+    """
+    Renders information exclusively about a caught exception instance.
+    Supporting standard multi-line, flat single-line, or machine-readable logfmt.
+    """
+    # 1. Type Guard: Only process active, caught instances of an Exception
+    if not exception or not isinstance(exception, Exception):
+        return None
+
+    err_type = exception.__class__.__name__
+    err_msg = str(exception).strip()
+
+    # 2. LOG MODE: Emit only the machine-safe exception class type to prevent row breaks
+    if _log_mode:
+        return f"intercepted_exception={err_type!r}"
+
+    # 3. ONELINE MODE: Inline the error type and flatten any multi-line message payloads
+    if _oneline:
+        if err_msg:
+            # Flatten internal newlines inside third-party exception messages safely
+            flat_msg = " ".join(err_msg.splitlines())
+            return f"{prefix} ({err_type}): {flat_msg}"
+        return f"{prefix} ({err_type})"
+
+    # 4. STANDARD MODE: Human-friendly multiline breakdown of the cause
+    if err_msg:
+        return f"{prefix} ({err_type}):\n    {err_msg}"
+    return f"{prefix} ({err_type})"
+
+
+src/simplibs/exception/modes/printers/intro/print_intro.py
+def print_intro(
+    error_name: str,
+    label: str | None,
+    *,
+    prefix: str = "⚠️ ",
+    _log_mode: bool = False
+) -> str:
+    """
+    Renders the primary error header, combining the error name and an optional label.
+    Adapts dynamically between machine-readable log format and human-friendly terminal layouts.
+    """
+    # 1. LOG MODE: Structured key-value formatting for log parsers
+    if _log_mode:
+        if label:
+            return f"error={error_name!r} label={label!r}"
+        return f"error={error_name}"
+
+    # 2. STANDARD MODE: Human-readable presentation header with visual emoji prefix
+    if label:
+        return f"{prefix}{error_name}: {label}"
+    return f"{prefix}{error_name}"
+
+src/simplibs/exception/modes/LOG.py
+class LogMessage(ModeBase):
+    """Machine-readable key-value output adhering to the logfmt specification."""
+
+    def _render(
+        self: "ModeBaseProtocol", data: "SimpleExceptionDataProtocol"
+    ) -> str:
+        """
+        Dynamically adapts and flattens all available exception fields into
+        a single space-separated logfmt string.
+
+        ## Full output preview:
+        error=ERROR message='...' label='...' value='...' expected='...' problem='...' context='...' file='filename.py' line=42 how_to_fix='...'
+
+        ## Field order
+        1. `error_name` + `label` — primary identification via `_print_intro_line`
+        2. `message` — free-form message
+        3. `expected` — description of the desired state
+        4. `Got` — the inspected value with its type
+        5. `problem` — description of the actual error
+        6. `context` — additional situational information
+        7. Location — file, line, and function info
+        """
+        location = data.caller_info
+
+        lines = [
+            # 1. Primary identification header (error=... or error=... label=...)
+            print_intro(data.error_name, data.label, _log_mode=True),
+
+            # 2. Structured core attributes (Printers handle safe !r quoting natively)
+            print_message(data.message, _log_mode=True),
+            print_expected(data.expected, _log_mode=True),
+            print_value_with_type(data.value, _log_mode=True),
+            print_problem(data.problem, _log_mode=True),
+            print_context(data.context, _log_mode=True),
+
+            # 3. Location tracing metadata
+            print_file_info(location, _log_mode=True),
+            print_file_path(location, _log_mode=True),
+        ]
+
+        # Join only active tokens into a perfectly flat, single-line log stream token row
+        return " ".join(line for line in lines if line)
+
+
+# Singleton mode instance
+LOG = LogMessage()
+
+src/simplibs/exception/modes/ONELINE.py
+class OnelineMessage(ModeBase):
+    """Compact single-line output for terminal use and rapid debugging cycles."""
+
+    def _render(
+        self: "ModeBaseProtocol", data: "SimpleExceptionDataProtocol"
+    ) -> str:
+        """
+        Dynamically adapts and flattens all available exception fields into
+        a single, pipe-separated string. Handles all data states automatically.
+
+        ## Full output preview:
+        ⚠️ ERROR: label | Message: ... | Expected: ... | Got: ... | Problem: ... | Context: ... | File: ...
+
+        ## Field order:
+        1. `error_name` + `label` — primary identification via `_print_intro_line`
+        2. `message` — free-form message
+        3. `expected` — description of the desired state
+        4. `Got` — the inspected value with its type
+        5. `problem` — description of the actual error
+        6. `context` — additional situational information
+        7. Location — file, line, and function info
+        """
+        location = data.caller_info
+
+        # Gather all formatted parts using standard human prefixes
+        raw_parts = [
+            print_intro(data.error_name, data.label),
+            print_message(data.message),
+            print_expected(data.expected),
+            print_value_with_type(data.value),
+            print_problem(data.problem),
+            print_context(data.context),
+            print_file_info(location),
+            print_file_path(location),
+        ]
+
+        # Join only existing segments with the pipe separator and strip trailing whitespace
+        return " | ".join(part for part in parts if part).strip()
+
+
+# Singleton mode instance
+ONELINE = OnelineMessage()
+
+src/simplibs/exception/modes/PRETTY.py
+class PrettyMessage(ModeBase):
+    """Structured output framed with double lines — the default presentation mode."""
+
+    def _render(
+        self: "ModeBaseProtocol", data: "SimpleExceptionDataProtocol"
+    ) -> str:
+        """
+        Dynamically adapts and renders the exception into a beautiful framed output.
+        Handles empty, message-only, and fully structured data seamlessly.
+
+        ## Full output preview:
+        ═════════════════════════════════════════════════════════════════
+        ⚠️ VALIDATION ERROR: label
+        ═════════════════════════════════════════════════════════════════
+        Message:   ...
+        Expected:  ...
+        Got:       "..." (type)
+        Problem:   ...
+                   ...
+        Context:   ...
+                   ...
+        File info: ... | Line: ... | Function: ...
+        File path: ...
+        ─────────────────────────────────────────────────────────────────
+        🔧 How to fix:
+             • ...
+             • ...
+        ═════════════════════════════════════════════════════════════════
+        Intercepted exception (ValueError):
+            Expecting value: line 1 column 1 (char 0)
+        """
+        location = data.caller_info
+
+        # Check if we have any granular structured data for the inner body block
+        has_details = any(
+            [
+                data.expected,
+                data.value is not UNSET,
+                data.problem,
+                data.context,
+            ]
+        )
+
+        lines = [
+
+            # 1. Primary identification header (⚠️ ERROR_NAME: label)
+            DOUBLE_LINE,
+            print_intro(data.error_name, data.label),
+
+            # 2. Render secondary line ONLY if granular structure details follow
+            DOUBLE_LINE if has_details else None,
+
+            # 3. Core body section (Printers return None internally if fields are omitted)
+            print_message(data.message),
+            print_expected(data.expected),
+            print_value_with_type(data.value),
+            print_problem(data.problem),
+            print_context(data.context),
+
+            # 4. Shared location metadata components
+            print_file_info(location),
+            print_file_path(location),
+
+            # 5. Actionable remediation block (How to fix)
+            SINGLE_LINE if data.how_to_fix else None,
+            print_how_to_fix(data.how_to_fix),
+            DOUBLE_LINE,
+
+            # 6. Captured underlying exception block at the absolute bottom
+            print_intercepted_exception(data.exception),
+        ]
+
+        return "\n".join(line for line in lines if line)
+
+
+# Singleton mode instance
+PRETTY = PrettyMessage()
+
+src/simplibs/exception/modes/SIMPLE.py
+class SimpleMessage(ModeBase):
+    """Output without decorative lines — plain text layout."""
+
+    def _render(
+        self: "ModeBaseProtocol", data: "SimpleExceptionDataProtocol"
+    ) -> str:
+        """
+        Dynamically adapts and renders the exception into a clean plain text layout.
+        Handles empty, message-only, and fully structured data seamlessly.
+
+        ## Full output preview:
+        ⚠️ VALIDATION ERROR: label
+        Message:   ...
+        Expected:  ...
+        Got:       "..." (type)
+        Problem:   ...
+                   ...
+        Context:   ...
+                   ...
+        File info: File: ... | Line: ... | Function: ...
+        File path: ...
+        🔧 How to fix:
+             • ...
+             • ...
+        Intercepted exception (ValueError):
+            Expecting value: line 1 column 1 (char 0)
+        """
+        location = data.caller_info
+
+        lines = [
+            # 1. Primary identification header (⚠️ ERROR_NAME: label)
+            print_intro(data.error_name, data.label),
+
+            # 2. Core exception details (Printers return None if values are omitted)
+            print_message(data.message),
+            print_expected(data.expected),
+            print_value_with_type(data.value),
+            print_problem(data.problem),
+            print_context(data.context),
+
+            # 3. Shared location metadata components
+            print_file_info(location),
+            print_file_path(location),
+
+            # 4. Actionable remediation block (How to fix)
+            print_how_to_fix(data.how_to_fix),
+
+            # 5. Captured underlying exception block at the absolute bottom
+            print_intercepted_exception(data.exception),
+        ]
+
+        # Join only existing segments—empty rows caused by missing data dissolve instantly
+        return "\n".join(line for line in lines if line)
+
+
+# Singleton mode instance
+SIMPLE = SimpleMessage()
+
+src/simplibs/exception/protocols/ModeBaseProtocol.py
+@runtime_checkable
+class ModeBaseProtocol(Protocol):
+    """
+    Comprehensive protocol mirroring the entire contract of an exception mode.
+    Used for full-spectrum type hinting and internal code intelligence.
+    """
+
+    def render(
+        self,
+        data: "SimpleExceptionDataProtocol",
+        *,
+        validate: bool = True
+    ) -> str:
+        """Public entry point with built-in validation."""
+        ...
+
+    def _render(self, data: "SimpleExceptionDataProtocol") -> str:
+        """Internal abstract method defining the specific text layout."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+src/simplibs/exception/protocols/SimpleExceptionDataProtocol.py
+@runtime_checkable
+class SimpleExceptionDataProtocol(Protocol):
+    """Protocol defining the public interface of SimpleExceptionData."""
+
+    # --- Core exception info ---
+    error_name: str
+    exception: type[Exception] | None
+    intercepted_exception: str | None
+
+    # --- Info about the inspected value ---
+    value: object | UnsetType
+    label: str | None
+
+    # --- Exception description ---
+    expected: str | None
+    message: str | None
+    problem: str | tuple[str, ...] | None
+    context: str | tuple[str, ...] | None
+
+    # --- How to fix ---
+    how_to_fix: str | tuple[str, ...] | None
+
+    # --- Location info ---
+    get_location: int | bool
+    skip_locations: tuple[str, ...]
+    _cached_caller_info: dict[str, Any] | None | UnsetType
+
+    # --- Single-line output ---
+    oneline: bool
+
+    # -------------------------------------------------------------------------
+    # Properties
+    # -------------------------------------------------------------------------
+
+    @property
+    def caller_info(self) -> dict[str, Any] | None:
+        """
+        Lazily-computed and cached call site information.
+        Returns a dictionary with keys (file, path, line, function) or None.
+        """
+        ...
+
+    # -------------------------------------------------------------------------
+    # Serializers
+    # -------------------------------------------------------------------------
+
+    def to_dict(self: "SimpleExceptionDataProtocol") -> dict[str, Any]:
+        """Serializes core public exception attributes into a clean dictionary — UNSET values are omitted."""
+        ...
+
+    def to_debug_dict(self: "SimpleExceptionDataProtocol") -> dict[str, Any]:
+        """Compiles a comprehensive diagnostic snapshot dictionary including computed metadata."""
+        ...
+
+    def to_json(self: "SimpleExceptionDataProtocol") -> str:
+        """Serializes core instance public data fields into an un-indented JSON string representation."""
+        ...
+
+src/simplibs/exception/protocols/SimpleExceptionProtocol.py
+@runtime_checkable
+class SimpleExceptionProtocol(SimpleExceptionDataProtocol, Protocol):
+    """
+    Protocol defining the full public interface of SimpleException.
+
+    Inherits all data attributes and properties from SimpleExceptionDataProtocol.
+    """
+
+    # --- Additional exception-specific fields ---
+    rendered_message: str
+
+    # -------------------------------------------------------------------------
+    # Dunder / Magic methods (from Exception and Custom)
+    # -------------------------------------------------------------------------
+
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        value: Any = UNSET,
+        label: str | None = None,
+        expected: str | None = None,
+        problem: str | tuple[str, ...] | list[str] | None = None,
+        context: str | tuple[str, ...] | list[str] | None = None,
+        how_to_fix: str | tuple[str, ...] | list[str] | None = None,
+        error_name: str | None = None,
+        exception: Exception | type[Exception] | None = None,
+        get_location: bool | int | None = None,
+        skip_locations: tuple[str, ...] | str | None = None,
+        oneline: bool = False,
+    ) -> None: ...
+
+    def __repr__(self) -> str: ...
+
+    def __str__(self) -> str: ...
+
+    # -------------------------------------------------------------------------
+    # Transformators
+    # -------------------------------------------------------------------------
+
+    def with_location_offset(self, offset: int = 1) -> Self:
+        """Creates a new exception instance with increased get_location depth."""
+        ...
+
+src/simplibs/exception/protocols/SimpleExceptionSettingsProtocol.py
+@runtime_checkable
+class SimpleExceptionSettingsProtocol(Protocol):
+    """
+    Protocol defining the structure and interface of SimpleExceptionSettings.
+
+    Since this class is a pure configuration registry not intended for
+    instantiation, the protocol covers its class-level attributes and methods.
+    """
+
+    # --- System Blacklist (Read-Only) ---
+    _SYSTEM_BLACKLIST: tuple[str, ...]
+
+    # --- Default configuration attributes ---
+    DEFAULT_GET_LOCATION: int | bool
+    DEFAULT_LOCATION_BLACKLIST: tuple[str, ...]
+    DEFAULT_MESSAGE_MODE: "ModeBaseProtocol"
+    DEFAULT_VALUE_TRUNCATION_LENGTH: int
+
+    # --- Internal cache ---
+    _dynamic_cls_cache: dict[tuple[Any, ...], type[BaseException]]
+
+    # -------------------------------------------------------------------------
+    # Initialization and Lifecycle
+    # -------------------------------------------------------------------------
+
+    def __init__(self) -> None:
+        """
+        Initialization always raises SimpleExceptionSettingsError
+        as this class is not intended to be instantiated.
+        """
+        ...
+
+    @classmethod
+    def reset(cls) -> None:
+        """Resets all settings back to their factory default values."""
+        ...
+
+src/simplibs/exception/tools/bool_or_exception.py
+def bool_or_exception(
+    return_bool: bool,
+    *,
+    message: str | None = None,
+    value: Any = UNSET,
+    label: str | None = None,
+    expected: str | None = None,
+    problem: str | tuple[str, ...] | list[str] | None = None,
+    context: str | tuple[str, ...] | list[str] | None = None,
+    how_to_fix: str | tuple[str, ...] | list[str] | None = None,
+    error_name: str | None = None,
+    exception: Exception | type[Exception] | None = None,
+    get_location: bool | int | None = None,
+    skip_locations: tuple[str, ...] | str | None = None,
+    oneline: bool = False,
+) -> Literal[False]:
+    """Returns False or raises SimpleException — a shortcut for conditional validation routines.
+
+    Args:
+        return_bool: If True, intercepts execution and returns False immediately.
+                     If False, raises a configured SimpleException.
+        message: Custom error message override.
+        value: The evaluated payload that triggered the failure.
+        label: The name of the field, property, or context being validated.
+        expected: A clear description of the valid layout or type constraints.
+        problem: Precise description of what failed in the current state.
+        context: Broader execution state or diagnostic details.
+        how_to_fix: Actionable steps for the developer to resolve the issue.
+        error_name: Custom dynamic class name override for the exception.
+        exception: Foreign exception to link or inherit from.
+        get_location: Controls the stack-trace caller-site resolution depth.
+        skip_locations: Custom patterns to exclude during location resolution.
+        oneline: If True, forces ultra-compact single-line log-style output.
+
+    Returns:
+        Literal[False]: Always returns False if return_bool is active.
+
+    Raises:
+        SimpleException: If return_bool is False.
+    """
+    # 1. Short-circuit and return False if a boolean fallback is explicitly requested
+    if return_bool:
+        return False
+
+    # 2. Offset explicit integer locations to account for this helper layer context
+    if isinstance(get_location, int):
+        get_location += 1
+
+    # 3. Lazy-load SimpleException inside the execution block to dismantle package circular dependencies
+    from ..SimpleException import SimpleException
+
+    # 4. Fire the structured exception down the execution stream
+    raise SimpleException(
+        message=message,
+        value=value,
+        label=label,
+        expected=expected,
+        problem=problem,
+        context=context,
+        how_to_fix=how_to_fix,
+        error_name=error_name,
+        exception=exception,
+        get_location=get_location,
+        skip_locations=skip_locations,
+        oneline=oneline,
+    )
+
+src/simplibs/exception/tools/raise_location_offset.py
+def raise_location_offset(
+    offset: int = 1
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Decorator that catches an exception and adds a location offset before re-raising.
+
+    Useful for utility, gatekeeper, or validation functions where you want the terminal
+    diagnostic report to point directly to the caller of the utility, not the line inside
+    the utility itself.
+    """
+
+    # 1. Define the decorator boundary layer receiving the target function blueprint
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+
+        # 2. Define the execution wrapper conserving the original signature metadata
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+
+            # 2.1 Enclose execution within a defensive evaluation block
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+
+                # 2.2 Evaluate via runtime duck-typing whether the exception supports frame shifting
+                if hasattr(e, "with_location_offset"):
+                    # 2.3 Add relative offset and re-raise suppressing local execution context
+                    raise e.with_location_offset(offset) from None
+
+                # 2.4 Resilient fallback for native standard exceptions (e.g. ValueError).
+                # Using 'from None' isolates the original traceback graph from being overwritten.
+                raise e from None
+
+        # Return the configured wrapper
+        return wrapper
+
+    # Return the structural decorator
+    return decorator
+
+src/simplibs/exception/tools/raise_with_location_offset.py
+def raise_with_location_offset(
+    exc: "BaseException | SimpleExceptionProtocol | Any",
+    offset: int = 1,
+) -> NoReturn:
+    """Takes an exception, applies a relative stack-frame location offset if supported, and raises it.
+
+    Acts as an operational functional wrapper shortcut for the fluent method call:
+    `raise exc.with_location_offset(offset)`
+
+    Args:
+        exc: The target exception instance to be processed and thrown.
+        offset: The relative number of frames to shift the location tracing vector back.
+
+    Raises:
+        BaseException: The incoming exception instance, with or without a mutated trace context.
+    """
+    # 1. Evaluate via runtime duck-typing whether the exception supports frame shifting mutation
+    if hasattr(exc, "with_location_offset"):
+        raise exc.with_location_offset(offset)
+
+    # 2. Resilient fallback for standard Python exceptions (e.g. ValueError, TypeError).
+    # Using 'from None' prevents Python from compounding a local frame mutation exception context,
+    # thereby fully preserving the original underlying traceback of the raw exception object.
+    raise exc from None
+
+
+src/simplibs/exception/SimpleException.py
+class SimpleException(SimpleExceptionData, Exception):
+    """Structured runtime exception engine optimized for the Simple ecosystem."""
+
+    # -------------------------------------------------------------------------
+    # __init__ — attribute assignment and message assembly
+    # -------------------------------------------------------------------------
+
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        value: Any = UNSET,
+        label: str | None = None,
+        expected: str | None = None,
+        problem: str | tuple[str, ...] | list[str] | None = None,
+        context: str | tuple[str, ...] | list[str] | None = None,
+        how_to_fix: str | tuple[str, ...] | list[str] | None = None,
+        error_name: str | None = None,
+        exception: Exception | type[Exception] | None = None,
+        get_location: bool | int | None = None,
+        skip_locations: tuple[str, ...] | str | None = None,
+        oneline: bool = False,
+    ) -> None:
+        # --- Core metadata ---
+        self.error_name = normalize_string(self, error_name, "error_name")
+        self.exception = normalize_exception(self, exception)
+
+        # --- Inspected value ---
+        self.value = value
+        self.label = normalize_string(self, label, "label")
+
+        # --- Exception description ---
+        self.expected = normalize_string(self, expected, "expected")
+        self.message = normalize_string(self, message, "message")
+        self.problem = normalize_strings(self, problem, "problem")
+        self.context = normalize_strings(self, context, "context")
+
+        # --- Actionable remediation ---
+        self.how_to_fix = normalize_strings(self, how_to_fix, "how_to_fix")
+
+        # --- Location metadata options ---
+        self.get_location = process_get_location(get_location)
+        self.skip_locations = process_skip_locations(skip_locations)
+
+        # --- Layout overrides ---
+        self.oneline = normalize_bool(self, oneline, "oneline")
+
+        # --- Compile the visual terminal text footprint ---
+        self.rendered_message = assemble_message(self, oneline)
+
+        # --- Initialize Exception base class, bypassing dataclass __init__ in MRO ---
+        Exception.__init__(self, self.rendered_message)
+
+    # -------------------------------------------------------------------------
+    # Dunder methods
+    # -------------------------------------------------------------------------
+
+    def __new__(
+        cls,
+        *args: Any,
+        exception: type[Exception] | UnsetType = UNSET,
+        **kwargs: Any
+    ) -> "SimpleExceptionProtocol":
+        """
+        Dynamically injects a foreign exception type into the class ancestors (MRO) if provided.
+        """
+        return add_exception_type(cls, exception)
+
+    def __init_subclass__(
+        cls,
+        **kwargs: Any
+    ) -> None:
+        """
+        Validates the contract of concrete subclasses during definition to catch syntax typos early.
+        """
+        super().__init_subclass__(**kwargs)
+        check_children_attributes(SimpleExceptionData, cls)
+
+    def __str__(self) -> str:
+        """
+        Returns the fully compiled visual layout string block representation of the exception.
+        """
+        return self.rendered_message
+
+    def __repr__(self) -> str:
+        """
+        Returns an unambiguous engineering string representation containing the class identity.
+        """
+        return f"<{self.__class__.__name__}(error_name={self.error_name!r})>"
+
+    # -------------------------------------------------------------------------
+    # Transformators
+    # -------------------------------------------------------------------------
+
+    def with_location_offset(
+        self: "SimpleExceptionProtocol", offset: int = 1
+    ) -> "SimpleExceptionProtocol":
+        """
+        Spawns a modified clone of this exception with an adjusted file-tracking stack lookup depth.
+        """
+        return _with_location_offset(self, offset)
+
+src/simplibs/exception/SimpleExceptionData.py
+@dataclass
+class SimpleExceptionData:
+    """Pure state data class defining the attributes, boundaries, and defaults of SimpleException."""
+
+    # --- Core exception info ---
+    error_name: str = "ERROR"
+    exception: type[Exception] | None = None
+    intercepted_exception: str | None = None
+
+    # --- Info about the inspected value ---
+    # The sentinel MUST remain here because the value can literally be anything (including None)
+    value: Any = UNSET
+
+    # --- Exception description ---
+    label: str | None = None
+    expected: str | None = None
+    message: str | None = None
+    problem: str | tuple[str, ...] | None = None
+    context: str | tuple[str, ...] | None = None
+
+    # --- How to fix ---
+    how_to_fix: str | tuple[str, ...] | None = None
+
+    # --- Location info ---
+    get_location: int | bool = True
+    skip_locations: tuple[str, ...] = ()
+    _cached_caller_info: dict[str, Any] | None | UnsetType = UNSET
+
+    # --- Single-line output ---
+    oneline: bool = False
+
+    # -------------------------------------------------------------------------
+    # Properties
+    # -------------------------------------------------------------------------
+
+    @property
+    def caller_info(self) -> dict[str, Any] | None:
+        """
+        Lazily-computed and cached filesystem call site metadata footprint.
+
+        Returns:
+            Dictionary containing structured keys: file, path, line, function.
+            Returns None if location reporting is disabled or the execution frame is missing.
+
+        Caching Strategy:
+            Evaluates exactly once. The outcome is locked inside _cached_caller_info.
+            Subsequent access pulls from the state cache instantly with zero overhead.
+        """
+        # 1. Immediately short-circuit if the consumer explicitly muted tracking
+        if not self.get_location:
+            return None
+
+        # 2. Execute heavy stack introspection only if the cache has never been filled
+        if self._cached_caller_info is UNSET:
+            # get_location acts as expected_frames (1 = immediate user boundary frame)
+            self._cached_caller_info = extract_caller_info(
+                expected_frames=int(self.get_location),
+                excluded_patterns=self.skip_locations,
+            )
+
+        # 3. Return the structurally validated cache layer dict or None footprint
+        # noinspection PyTypeChecker
+        return self._cached_caller_info
+
+    # -------------------------------------------------------------------------
+    # Serializers
+    # -------------------------------------------------------------------------
+
+    def to_dict(self: "SimpleExceptionDataProtocol") -> dict[str, Any]:
+        """Serializes core public exception attributes into a clean dictionary — UNSET values are omitted."""
+        return _to_dict(self)
+
+    def to_debug_dict(self: "SimpleExceptionDataProtocol") -> dict[str, Any]:
+        """Compiles a comprehensive diagnostic snapshot dictionary including computed metadata."""
+        return _to_debug_dict(self)
+
+    def to_json(self: "SimpleExceptionDataProtocol") -> str:
+        """Serializes core instance public data fields into an un-indented JSON string representation."""
+        return json.dumps(self.to_dict(), default=str)
+
+src/simplibs/exception/SimpleExceptionSettings.py
+class SimpleExceptionSettings(metaclass=SettingsMeta):
+    """Central configuration registry — the single source of truth for the entire exception ecosystem."""
+
+    # --- System Blacklist (Read-Only) ---
+    # Visible for maximum architectural transparency, but sealed at the metaclass layer.
+    _SYSTEM_BLACKLIST: tuple[str, ...] = ("<", "simplibs/exception")
+
+    # --- Live Configuration Attributes ---
+    GET_LOCATION: int | bool = 1
+    LOCATION_BLACKLIST: tuple[str, ...] = _SYSTEM_BLACKLIST
+    MESSAGE_MODE: "ModeBaseProtocol" = PRETTY
+    VALUE_TRUNCATION_LENGTH: int = 70
+
+    # --- Internal Cache ---
+    _dynamic_cls_cache: dict[
+        tuple[type[BaseException], type[BaseException]], type[BaseException]
+    ] = {}
+
+    # --- Prevent Instantiation ---
+    def __init__(self) -> None:
+        raise SimpleExceptionSettingsError(
+            label="SimpleExceptionSettings",
+            problem="This configuration registry class is not intended to be instantiated.",
+            how_to_fix=(
+                "Access or modify configuration attributes directly on the class: SimpleExceptionSettings.GET_LOCATION",
+                "To restore factory defaults programmatically, call: SimpleExceptionSettings.reset()",
+            ),
+        )
+
+    # --- Reset to Default Factory Values ---
+    @classmethod
+    def reset(cls) -> None:
+        """Resets all operational settings and internal caches back to their factory default values."""
+        cls.GET_LOCATION = 1
+        cls.LOCATION_BLACKLIST = ()
+        cls.VALUE_TRUNCATION_LENGTH = 70
+        cls.MESSAGE_MODE = PRETTY
+        cls._dynamic_cls_cache = {}

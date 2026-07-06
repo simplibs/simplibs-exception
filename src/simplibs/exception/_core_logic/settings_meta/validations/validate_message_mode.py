@@ -4,7 +4,9 @@ from ...._core_logic.internal_exceptions import SimpleExceptionSettingsError
 from ....modes import ModeBase
 
 
-def validate_message_mode(value: Any) -> None:
+def validate_message_mode(
+    value: Any
+) -> None:
     """Verifies that the value is an instance of a class derived from ModeBase."""
     if not isinstance(value, ModeBase):
         raise SimpleExceptionSettingsError(

@@ -1,8 +1,8 @@
 from .dividers import DOT_PREFIX, DOUBLE_LINE, EMPTY_PREFIX, SINGLE_LINE
 from .exception_info_multiline import print_context, print_problem
-from .exception_info_oneline import print_expected, print_message, print_value_with_type
+from .exception_info import print_expected, print_message, print_value_with_type
 from .file_info import print_file_info, print_file_path
-from .hepl_info import print_how_to_fix, print_intercepted_exception
+from .hepl_info_multiline import print_how_to_fix, print_intercepted_exception
 from .intro import print_intro
 
 __all__ = [
