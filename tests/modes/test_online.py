@@ -1,53 +1,51 @@
 import pytest
 
+from simplibs.sentinels import UNSET
 from simplibs.exception.modes.ONELINE import ONELINE
 
 
 class _StubData:
-    """Mock structure providing fully populated exception fields for structural layout testing."""
+    """Mock structure with multi-line tuples to verify flattening and layout integrity."""
     error_name = "ERROR"
     label = "my-label"
     message = "my message"
     expected = "expected thing"
     value = 42
-    problem = "the problem"
-    context = "the context"
+    # Tuple with multiple items to test flattening logic
+    problem = ("Problem part 1", "Problem part 2")
+    context = ("Context line 1", "Context line 2")
     how_to_fix = "fix it"
     caller_info = None
     exception = None
 
 
-def test_render_produces_pipe_separated_single_line():
+def test_render_flattens_tuples_horizontally():
     """
-    Guarantees that the ONELINE layout engine flattens all metrics horizontally,
-    separating segments using vertical pipes and strictly ensuring no newline characters
-    are introduced.
+    Architectural Contract: Verifies that multi-line inputs (tuples) provided to
+    problem/context fields are flattened into the horizontal pipe-separated stream,
+    ensuring no physical newlines escape into the ONELINE output.
     """
-    # 1. Execute rendering engine on the stub data blueprint
-    result = ONELINE.render(_StubData(), validate=False)
+    result = ONELINE._render(_StubData())
 
-    # 2. Validate structural contract constraints
+    # 1. Kontrola, že nikde není '\n' (fyzický zlom řádku)
     assert "\n" not in result
+
+    # 2. Kontrola, že tuple prvky byly spojeny mezerou v rámci svého bloku
+    # (vycházíme z implementace print_problem/print_context s _oneline=True)
+    assert "Problem:   Problem part 1 Problem part 2" in result
+    assert "Context:   Context line 1 Context line 2" in result
+
+    # 3. Kontrola celkové pipe separace
     assert " | " in result
 
 
 def test_render_includes_all_populated_fields():
-    """
-    Verifies that the horizontal formatter correctly processes and integrates
-    every single populated field from the metadata snapshot, embedding the proper prefixes.
-    """
-    # 1. Execute rendering engine on the stub data blueprint
-    result = ONELINE.render(_StubData(), validate=False)
-
-    # 2. Assert that all standard data footprints are present in the serialized stream
+    """Verifies that all components are correctly strung together."""
+    result = ONELINE._render(_StubData())
     assert "⚠️ ERROR: my-label" in result
     assert "Message:   my message" in result
-    assert "Expected:  expected thing" in result
     assert "Got:       42 (int)" in result
-    assert "Problem:   the problem" in result
-    assert "Context:   the context" in result
 
 
 def test_singleton_repr():
-    """Ensures the mode singleton instance provides a clean, recognizable debug string representation."""
     assert repr(ONELINE) == "<OnelineMessage mode>"

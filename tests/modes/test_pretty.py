@@ -1,9 +1,9 @@
+import pytest
+
+from simplibs.sentinels import UNSET
 from simplibs.exception.modes.PRETTY import PRETTY
 from simplibs.exception.modes.printers.dividers.DOUBLE_LINE import DOUBLE_LINE
 from simplibs.exception.modes.printers.dividers.SINGLE_LINE import SINGLE_LINE
-from simplibs.exception.SimpleExceptionData import SimpleExceptionData
-
-UNSET = SimpleExceptionData().value
 
 
 class _FullData:
@@ -46,50 +46,66 @@ class _EmptyData:
 
 
 def test_render_starts_and_wraps_with_double_line():
-    result = PRETTY.render(_FullData(), validate=False)
+    """Validates that the visual frame consistently opens with a full-width double line character buffer."""
+    result = PRETTY._render(_FullData())
     lines = result.split("\n")
     assert lines[0] == DOUBLE_LINE
 
 
 def test_render_includes_header_with_label():
-    result = PRETTY.render(_FullData(), validate=False)
+    """Ensures that the primary identity section correctly renders both the identity name and its human label description."""
+    result = PRETTY._render(_FullData())
     assert "⚠️ ERROR: my-label" in result
 
 
 def test_render_includes_second_double_line_when_details_present():
-    result = PRETTY.render(_FullData(), validate=False)
-    # start + post-intro (has_details) + closing = 3
+    """
+    Verifies elastic divider scaling: when dynamic details (expected, value, problem, context) 
+    are populated, a secondary internal double-line divider must separate the header from the core body.
+    """
+    result = PRETTY._render(_FullData())
+    # 3 lines expected: opening boundary + post-intro detail divider + closing boundary
     assert result.count(DOUBLE_LINE) == 3
 
 
 def test_render_omits_second_double_line_when_no_details():
-    result = PRETTY.render(_MessageOnlyData(), validate=False)
-    # Only the closing DOUBLE_LINE should be present, not a second one right
-    # after the header, since expected/value/problem/context are all absent.
-    assert result.count(DOUBLE_LINE) == 2  # opening + closing framing lines
+    """
+    Ensures layout cleanliness: when granular comparison metadata is missing, 
+    the engine must suppress the secondary body divider to prevent layout bloat.
+    """
+    result = PRETTY._render(_MessageOnlyData())
+    # Only opening and closing lines should remain
+    assert result.count(DOUBLE_LINE) == 2
 
 
 def test_render_includes_single_line_before_how_to_fix():
-    result = PRETTY.render(_FullData(), validate=False)
+    """Validates remediation formatting: actionable steps must be visually separated by a single-line divider block."""
+    result = PRETTY._render(_FullData())
     assert SINGLE_LINE in result
     assert "🔧 How to fix:" in result
 
 
 def test_render_omits_single_line_when_no_how_to_fix():
-    result = PRETTY.render(_MessageOnlyData(), validate=False)
+    """Guarantees that if no mitigation instructions are supplied, the single-line remediation separator is skipped."""
+    result = PRETTY._render(_MessageOnlyData())
     assert SINGLE_LINE not in result
 
 
 def test_render_handles_fully_empty_data_gracefully():
-    result = PRETTY.render(_EmptyData(), validate=False)
+    """Confirms that the absolute minimum dataset successfully builds a valid, structurally coherent identity panel."""
+    result = PRETTY._render(_EmptyData())
     assert "⚠️ ERROR" in result
     assert isinstance(result, str)
 
 
 def test_render_includes_value_with_type():
-    result = PRETTY.render(_FullData(), validate=False)
+    """Validates integration with underlying field printers, ensuring inspected values are accurately rendered with type markers."""
+    result = PRETTY._render(_FullData())
     assert "Got:       42 (int)" in result
 
 
 def test_singleton_repr():
+    """Verifies that the stateless singleton instance exposes a clean, predictable string representation."""
     assert repr(PRETTY) == "<PrettyMessage mode>"
+
+

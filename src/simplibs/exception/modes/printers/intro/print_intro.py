@@ -26,7 +26,7 @@ def print_intro(
     if _log_mode:
         if label:
             return f"error={error_name!r} label={label!r}"
-        return f"error={error_name}"
+        return f"error={error_name!r}"
 
     # 2. STANDARD MODE: Human-readable presentation header with visual emoji prefix
     if label:

@@ -1,0 +1,167 @@
+def describe_call(
+    func: Callable[..., Any],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> str:
+    name = getattr(func, "__name__", repr(func))
+    args_repr = ", ".join(repr(a) for a in args)
+    kwargs_repr = ", ".join(f"{k}={v!r}" for k, v in kwargs.items())
+    joined = ", ".join(part for part in (args_repr, kwargs_repr) if part)
+    return f"{name}({joined})"
+
+def assert_raises(
+    func: Callable[..., Any],
+    *args: Any,
+    exception_type: type[BaseException] = Exception,
+    expected: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> BaseException:
+    try:
+        func(*args, **kwargs)
+    except exception_type as exc:
+        if expected:
+            assert_exception_fields(exc, expected)
+        return exc
+    except BaseException as unexpected:
+        raise AssertionError(
+            f"{describe_call(func, args, kwargs)} raised "
+            f"{type(unexpected).__name__} instead of the expected "
+            f"{exception_type.__name__}."
+        ) from unexpected
+    raise AssertionError(
+        f"{describe_call(func, args, kwargs)} did not raise "
+        f"{exception_type.__name__} as expected."
+    )
+
+def assert_does_not_raise(
+    func: Callable[..., Any],
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    try:
+        return func(*args, **kwargs)
+    except Exception as unexpected:
+        raise AssertionError(
+            f"{describe_call(func, args, kwargs)} was expected to pass "
+            f"without raising, but raised {type(unexpected).__name__}: "
+            f"{unexpected}"
+        ) from unexpected
+
+def assert_exception_fields(
+    exc: BaseException,
+    expected: dict[str, Any],
+) -> None:
+    for field_name, expected_value in expected.items():
+        actual_value = getattr(exc, field_name, MISSING)
+        if actual_value is MISSING:
+            raise AssertionError(
+                f"Exception of type '{type(exc).__name__}' has no attribute "
+                f"'{field_name}' to check."
+            )
+        if actual_value != expected_value:
+            debug_info = (
+                exc.to_debug_dict()
+                if hasattr(exc, "to_debug_dict")
+                else repr(exc)
+            )
+            raise AssertionError(
+                f"Exception field '{field_name}' mismatch.\n"
+                f"Expected: {expected_value!r}\n"
+                f"Got:      {actual_value!r}\n"
+                f"Full exception state: {debug_info}"
+            )
+
+def assert_validation_case(
+    func: Callable[..., Any],
+    *,
+    valid: tuple[tuple[Any, ...], dict[str, Any]] | None = None,
+    invalid: tuple[tuple[Any, ...], dict[str, Any]] | None = None,
+    exception_type: type[BaseException] = Exception,
+    expected: dict[str, Any] | None = None,
+) -> BaseException | None:
+    if valid is not None:
+        valid_args, valid_kwargs = valid
+        assert_does_not_raise(func, *valid_args, **valid_kwargs)
+    if invalid is not None:
+        invalid_args, invalid_kwargs = invalid
+        return assert_raises(
+            func,
+            *invalid_args,
+            exception_type=exception_type,
+            expected=expected,
+            **invalid_kwargs,
+        )
+    return None
+
+def assert_simple_exception(
+    func: Callable[..., Any],
+    *,
+    # --- How to call the function under test ---
+    valid_value: Any = UNSET,
+    invalid_value: Any = UNSET,
+    valid_args: tuple[Any, ...] = (),
+    valid_kwargs: dict[str, Any] | None = None,
+    invalid_args: tuple[Any, ...] = (),
+    invalid_kwargs: dict[str, Any] | None = None,
+    exception_type: type[BaseException] = Exception,
+    # --- Expected SimpleExceptionData fields (UNSET = don't check this one) ---
+    error_name: str | UnsetType = UNSET,
+    label: str | None | UnsetType = UNSET,
+    message: str | None | UnsetType = UNSET,
+    expected: str | None | UnsetType = UNSET,
+    value: Any = UNSET,
+    problem: "str | tuple[str, ...] | None | UnsetType" = UNSET,
+    context: "str | tuple[str, ...] | None | UnsetType" = UNSET,
+    how_to_fix: "str | tuple[str, ...] | None | UnsetType" = UNSET,
+    exception: "Exception | type[Exception] | None | UnsetType" = UNSET,
+    get_location: "bool | int | UnsetType" = UNSET,
+    skip_locations: "tuple[str, ...] | UnsetType" = UNSET,
+    oneline: "bool | UnsetType" = UNSET,
+) -> BaseException | None:
+    if not callable(func):
+        raise AssertionError(
+            "assert_simple_exception() requires a valid, callable function "
+            f"to test — got: {func!r}"
+        )
+    valid_kwargs = valid_kwargs or {}
+    invalid_kwargs = invalid_kwargs or {}
+    resolved_valid_args = (
+        valid_args if valid_args else
+        ((valid_value,) if valid_value is not UNSET else None)
+    )
+    resolved_invalid_args = (
+        invalid_args if invalid_args else
+        ((invalid_value,) if invalid_value is not UNSET else None)
+    )
+    has_valid_case = resolved_valid_args is not None or bool(valid_kwargs)
+    has_invalid_case = resolved_invalid_args is not None or bool(invalid_kwargs)
+    if has_valid_case:
+        assert_does_not_raise(func, *(resolved_valid_args or ()), **valid_kwargs)
+    exc: BaseException | None = None
+    if has_invalid_case or not has_valid_case:
+        exc = assert_raises(
+            func,
+            *(resolved_invalid_args or ()),
+            exception_type=exception_type,
+            **invalid_kwargs,
+        )
+        field_checks = {
+            "error_name": error_name,
+            "label": label,
+            "message": message,
+            "expected": expected,
+            "value": value,
+            "problem": problem,
+            "context": context,
+            "how_to_fix": how_to_fix,
+            "exception": exception,
+            "get_location": get_location,
+            "skip_locations": skip_locations,
+            "oneline": oneline,
+        }
+        fields_to_check = {
+            name: val for name, val in field_checks.items() if val is not UNSET
+        }
+        if fields_to_check:
+            assert_exception_fields(exc, fields_to_check)
+    return exc

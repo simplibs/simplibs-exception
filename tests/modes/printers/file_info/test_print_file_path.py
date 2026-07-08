@@ -4,7 +4,7 @@ from simplibs.exception.modes.printers.file_info.print_file_path import (
 
 
 def test_none_returns_none():
-    """Verifies that passing a None context gracefully yields None without raising an error."""
+    """Confirms that passing a None context gracefully yields None, indicating the row should be skipped."""
     assert print_file_path(None) is None
 
 
@@ -15,9 +15,8 @@ def test_empty_dict_returns_none():
 
 def test_dynamic_frame_path_is_formatted_normally():
     """
-    Verifies that the printer does not perform business logic filtering on paths.
-    If a dynamic frame layout (like <string>) escapes upstream processing
-    or serves as a fallback, the printer must format it objectively.
+    Architectural Contract: Verifies that the printer does not perform hidden business logic filtering on paths.
+    If an internal dynamic fallback string (like <string>) reaches this layer, the engine must format it objectively.
     """
     caller_info = {
         "file": "<string>",
@@ -27,8 +26,6 @@ def test_dynamic_frame_path_is_formatted_normally():
     }
     result = print_file_path(caller_info)
 
-    # Assert that the printer objectively formats what it receives,
-    # leaving filtration to the upper stack-inspection layers.
     assert result == "File path: <string>"
 
 
@@ -57,7 +54,7 @@ def test_custom_prefix_is_respected():
 
 
 def test_log_mode_format():
-    """Verifies the structured, machine-scannable attribute format generated when log mode is active."""
+    """Verifies the structured, machine-scannable attribute format generated when log mode is active, enforcing safe repr encapsulation."""
     caller_info = {
         "file": "my_module.py",
         "path": "/some/path/my_module.py",
@@ -66,3 +63,5 @@ def test_log_mode_format():
     }
     result = print_file_path(caller_info, _log_mode=True)
     assert result == "path='/some/path/my_module.py'"
+
+

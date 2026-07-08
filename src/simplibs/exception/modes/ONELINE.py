@@ -61,8 +61,8 @@ class OnelineMessage(ModeBase):
             print_message(data.message),
             print_expected(data.expected),
             print_value_with_type(data.value),
-            print_problem(data.problem),
-            print_context(data.context),
+            print_problem(data.problem, _oneline=True),
+            print_context(data.context, _oneline=True),
             print_file_info(location),
             print_file_path(location),
         ]

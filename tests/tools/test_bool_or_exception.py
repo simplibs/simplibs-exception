@@ -4,39 +4,41 @@ from simplibs.exception.tools.bool_or_exception import bool_or_exception
 
 
 def test_return_bool_true_short_circuits_to_false():
-    """
-    Ensures that when return_bool is active (True), the evaluation engine
-    instantly short-circuits and returns False, avoiding exception generation.
-    """
-    result = bool_or_exception(True, message="never raised", label="x")
+    """Confirms short-circuit logic: immediately returns False without side effects."""
+    result = bool_or_exception(True, message="should not matter")
     assert result is False
 
 
-def test_return_bool_true_ignores_all_other_kwargs():
-    """
-    Verifies that the short-circuit pathway remains completely unaffected
-    even if extra keyword configuration arguments are supplied.
-    """
-    result = bool_or_exception(
-        True,
-        message="whatever",
-        value=123,
-        label="x",
-        expected="y",
-        problem="z",
-    )
+def test_return_bool_true_ignores_config():
+    """Ensures extra arguments don't trigger exception logic when return_bool is active."""
+    result = bool_or_exception(True, message="ignorable", label="ignored")
     assert result is False
 
 
-def test_return_bool_false_raises_configured_simple_exception():
-    """
-    Validates the standard routine error pathway: when return_bool is False,
-    the tool properly generates and throws a fully populated SimpleException.
-    """
-    # 1. Assert that the helper correctly converts input data parameters into a raised instance
-    with pytest.raises(SimpleException) as exc_info:
+def test_return_bool_false_raises_exception():
+    """Validates that standard error flow constructs and raises the SimpleException."""
+    with pytest.raises(SimpleException) as exc:
         bool_or_exception(False, message="boom", label="x")
 
-    # 2. Verify state retention on the caught exception context object
-    assert exc_info.value.message == "boom"
-    assert exc_info.value.label == "x"
+    assert exc.value.message == "boom"
+    assert exc.value.label == "x"
+
+
+def test_get_location_offset_increment():
+    """
+    Verifies that explicit integer depth passes through the tool helper
+    with the +1 offset adjustment to maintain frame accuracy.
+    """
+    # Pokud zadáme get_location=1, helper by měl interně volat SimpleException(get_location=2)
+    with pytest.raises(SimpleException) as exc:
+        bool_or_exception(False, get_location=1)
+
+    assert exc.value.get_location == 2
+
+
+def test_oneline_flag_propagation():
+    """Confirms that layout directives like oneline are passed through to the engine."""
+    with pytest.raises(SimpleException) as exc:
+        bool_or_exception(False, oneline=True)
+
+    assert exc.value.oneline is True

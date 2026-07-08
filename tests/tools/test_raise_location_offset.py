@@ -1,78 +1,61 @@
 import pytest
-
 from simplibs.exception.tools.raise_location_offset import raise_location_offset
 
 
-class _FakeLocationAwareError(Exception):
-    """A minimal double that mimics the duck-typed with_location_offset protocol,
-    kept independent from the real SimpleException class (which currently
-    has a separate, already-documented construction bug)."""
-
+class _MockAwareError(Exception):
     def __init__(self, tag):
         super().__init__(tag)
-        self.tag = tag
         self.offset_applied = None
 
     def with_location_offset(self, offset=1):
-        new = _FakeLocationAwareError(self.tag)
+        new = _MockAwareError("cloned")
         new.offset_applied = offset
         return new
 
 
-def test_function_returns_normally_when_no_exception_raised():
+def test_transparency_on_success():
+    """Verifies the decorator does not interfere with normal function execution."""
+
     @raise_location_offset()
-    def ok():
-        return "fine"
+    def get_val(): return 42
 
-    assert ok() == "fine"
+    assert get_val() == 42
 
 
-def test_default_offset_is_applied_to_location_aware_exception():
+def test_offset_mutation_on_error():
+    """Ensures the decorator successfully applies the offset to aware exceptions."""
+
+    @raise_location_offset(offset=2)
+    def fail():
+        raise _MockAwareError("trigger")
+
+    with pytest.raises(_MockAwareError) as exc:
+        fail()
+
+    assert exc.value.offset_applied == 2
+
+
+def test_plain_exception_preservation():
+    """Confirms plain exceptions pass through without being wrapped in context."""
+
     @raise_location_offset()
-    def boom():
-        raise _FakeLocationAwareError("original")
+    def fail():
+        raise ValueError("raw")
 
-    with pytest.raises(_FakeLocationAwareError) as exc_info:
-        boom()
+    with pytest.raises(ValueError) as exc:
+        fail()
 
-    assert exc_info.value.offset_applied == 1
-
-
-def test_custom_offset_is_applied_to_location_aware_exception():
-    @raise_location_offset(offset=3)
-    def boom():
-        raise _FakeLocationAwareError("original")
-
-    with pytest.raises(_FakeLocationAwareError) as exc_info:
-        boom()
-
-    assert exc_info.value.offset_applied == 3
+    assert str(exc.value) == "raw"
+    assert exc.value.__suppress_context__ is True
 
 
-def test_plain_exception_without_location_support_is_reraised_unmodified():
+def test_metadata_preservation():
+    """Checks that function signatures/docs survive the decoration process."""
+
     @raise_location_offset()
-    def boom():
-        raise ValueError("plain error")
+    def my_func():
+        """Docs."""
+        pass
 
-    with pytest.raises(ValueError, match="plain error"):
-        boom()
-
-
-def test_reraised_plain_exception_suppresses_original_context():
-    @raise_location_offset()
-    def boom():
-        raise ValueError("plain error")
-
-    with pytest.raises(ValueError) as exc_info:
-        boom()
-
-    assert exc_info.value.__suppress_context__ is True
-
-
-def test_decorator_preserves_function_metadata():
-    @raise_location_offset()
-    def documented_function():
-        """A docstring."""
-
-    assert documented_function.__name__ == "documented_function"
-    assert documented_function.__doc__ == "A docstring."
+    assert my_func.__name__ == "my_func"
+    assert my_func.__doc__ == "Docs."

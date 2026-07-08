@@ -91,7 +91,7 @@ This is where the magic happens. Give your exception *context*.
 
 ```python
 raise SimpleException(
-    value_label = "parameter age",
+    label = "parameter age",
     expected    = "a positive integer",
     value       = age,
     problem     = "value is negative",
@@ -108,7 +108,7 @@ All optional. Mix and match as needed.
 | Parameter | Type | What It Does |
 | :--- | :--- | :--- |
 | `message` | `str` | Free-form message — use instead of structured fields if you prefer |
-| `value_label` | `str` | Human label for the thing that broke (e.g., `"parameter age"`) |
+| `label` | `str` | Human label for the thing that broke (e.g., `"parameter age"`) |
 | `value` | `any` | The actual value that caused the problem (auto-truncated if huge) |
 | `expected` | `str` | What you wanted to see |
 | `problem` | `str` | What went wrong |
@@ -140,7 +140,7 @@ class AgeValidationError(SimpleException):
     )
 
 # Now just pass the specifics
-raise AgeValidationError(value=age, value_label="parameter age")
+raise AgeValidationError(value=age, label="parameter age")
 ```
 
 The library validates subclass definitions at import time, catching typos immediately instead of crashing at runtime. 🎯
@@ -183,7 +183,7 @@ def load_json(raw_data):
         raise SimpleException(
             exception=e,  # Pass the caught instance
             value=raw_data,
-            value_label="JSON input",
+            label="JSON input",
             expected="valid JSON",
             problem="JSON parsing failed",
             how_to_fix="Check for syntax errors: mismatched quotes, trailing commas, etc."
@@ -250,7 +250,7 @@ Everything compressed to one line. Perfect for tight logs.
 Machine-readable `key=value` format. Send this to Datadog, Splunk, or ELK.
 
 ```
-error=VALIDATION ERROR value_label='parameter age' expected='a positive integer' value='-5 (int)' problem='value is negative'
+error=VALIDATION ERROR label='parameter age' expected='a positive integer' value='-5 (int)' problem='value is negative'
 ```
 
 ### Switch Modes
@@ -340,14 +340,14 @@ Need to send errors over the wire or log them structurally?
 
 ```python
 e = SimpleException(
-    value_label="user_id",
+    label="user_id",
     value=None,
     problem="user not found"
 )
 
 # Get a clean dictionary (UNSET values omitted)
 e.to_dict()
-# {'error_name': 'ERROR', 'value_label': 'user_id', ...}
+# {'error_name': 'ERROR', 'label': 'user_id', ...}
 
 # Get JSON for APIs
 e.to_json()
@@ -656,7 +656,7 @@ def process_user_data(data):
         # Re-raise with custom configuration just for this case
         raise ValidationError(
             value=data['email'],
-            value_label="user email",
+            label="user email",
             get_location=False,  # Hide location for this one
             skip_locations=("email_validators/",)  # Add more patterns
         )
@@ -773,7 +773,7 @@ def validate_email(email):
     if "@" not in email:
         raise ValidationError(
             value=email,
-            value_label="email",
+            label="email",
             expected="a valid email address",
             problem="missing @ symbol"
         )
@@ -860,7 +860,7 @@ Every mode receives a `SimpleExceptionData` object containing all information ab
 | `error_name` | `str` | The error label (e.g., `"VALIDATION ERROR"`) |
 | `exception` | `type[Exception]` or `UNSET` | The exception class for catching |
 | `value` | `object` | The actual value that caused the problem |
-| `value_label` | `str` or `UNSET` | Human label for that value (e.g., `"parameter age"`) |
+| `label` | `str` or `UNSET` | Human label for that value (e.g., `"parameter age"`) |
 | `expected` | `str` or `UNSET` | What you wanted to see |
 | `problem` | `str` or `UNSET` | What went wrong |
 | `context` | `str` or `UNSET` | Extra situational info |
@@ -925,7 +925,7 @@ Builds the opening line with error name and optional value label:
 ```python
 self._print_intro_line(data)
 # Returns: "⚠️ VALIDATION ERROR: parameter age"
-# Or:      "⚠️ VALIDATION ERROR" (if no value_label)
+# Or:      "⚠️ VALIDATION ERROR" (if no label)
 ```
 
 #### `_print_caller_info(data: SimpleExceptionData, *, as_dict: bool = False) -> str | dict`
@@ -978,8 +978,8 @@ class SlackMode(ModeBase):
         ]
 
         # Add structured fields if present
-        if data.value_label:
-            blocks.append(f"*Value:* `{data.value_label}`")
+        if data.label:
+            blocks.append(f"*Value:* `{data.label}`")
 
         if data.value is not UNSET:
             blocks.append(f"*Got:* {self._print_value_with_type(data)}")
@@ -1125,7 +1125,7 @@ as living documentation of the expected behaviour.*
 SimpleException(
     # Core diagnostic fields (all optional)
     message="...",                      # Alternative to structured fields
-    value_label="...",                  # What thing broke?
+    label="...",                  # What thing broke?
     value=any_object,                   # The actual value
     expected="...",                     # What you wanted
     problem="...",                      # What went wrong

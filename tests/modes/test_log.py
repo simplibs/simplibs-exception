@@ -1,35 +1,44 @@
-from simplibs.exception.modes.LOG import LOG
-from simplibs.exception.SimpleExceptionData import SimpleExceptionData
+import pytest
 
-UNSET = SimpleExceptionData().value
+from simplibs.sentinels import UNSET
+from simplibs.exception.modes.LOG import LOG
 
 
 class _StubData:
+    """Mock structure with tuples to verify logfmt flattening for complex fields."""
     error_name = "ERROR"
     label = "my-label"
     message = "my message"
     expected = "expected thing"
     value = 42
-    problem = "the problem"
-    context = "the context"
+    # Tuple inputs to test if LOG mode correctly flattens them via print_problem/print_context
+    problem = ("Problem part 1", "Problem part 2")
+    context = ("Context line 1", "Context line 2")
     how_to_fix = "fix it"
     caller_info = None
     exception = None
 
 
 def test_render_produces_single_flat_line():
-    result = LOG.render(_StubData(), validate=False)
+    result = LOG._render(_StubData())
     assert "\n" not in result
 
 
 def test_render_includes_all_populated_fields():
-    result = LOG.render(_StubData(), validate=False)
+    """Verifies that all tokens are correctly formatted and complex fields are flattened."""
+    result = LOG._render(_StubData())
+
+    # Assert primary structure
     assert "error='ERROR' label='my-label'" in result
     assert "message='my message'" in result
     assert "expected='expected thing'" in result
+
+    # Opravený assert: očekáváme typ jako token bez uvozovek (int)
     assert "value=42 type=int" in result
-    assert "problem='the problem'" in result
-    assert "context='the context'" in result
+
+    # Ověření, že se tuple prvky slily do jednoho řetězce a byly zabaleny do repr uvozovek
+    assert "problem='Problem part 1 Problem part 2'" in result
+    assert "context='Context line 1 Context line 2'" in result
 
 
 def test_render_omits_missing_optional_fields():
@@ -45,8 +54,8 @@ def test_render_omits_missing_optional_fields():
         caller_info = None
         exception = None
 
-    result = LOG.render(_MinimalData(), validate=False)
-    assert result == "error=ERROR"
+    result = LOG._render(_MinimalData())
+    assert result == "error='ERROR'"
 
 
 def test_singleton_repr():

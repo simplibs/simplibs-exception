@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.0] - 2026-07-06
+
+### ⚠️ Breaking Changes
+
+- **Renamed Property**: `value_label` in `SimpleExceptionData` (and `SimpleException`) has been renamed to `label`. This provides broader context usage for exceptions even when no `value` is present.
+- **Dependency Constraint**: Recommend using `~= 0.2.0` in dependent projects to avoid automatic upgrades to 1.0.0 due to breaking changes.
+
+### 🔄 Changed
+
+- **Code Refactoring**: Massive transition from Mixin-based logic to functional composition within `_core_logic`. This significantly lightens the class MRO and improves maintainability.
+- **Internal Structure**: All supporting logic (previously mixin methods) has been moved to internal-only functional utilities within `_core_logic`, ensuring clean separation between internal mechanics and public API.
+
+### ✨ Added
+
+- **Multi-line Support**: `problem` and `context` fields now support `tuple[str, ...]` input, allowing for structured multi-line output in all modes.
+
+### 📋 Improved
+
+- **Stability**: Refactored the core engine for production readiness; transitioned to version 1.0.0 to signal API stability.
+- **Codebase Cleanliness**: Removed redundant mixin boilerplate in favor of specialized initialization and normalization functions.
+
+---
+
 ## [0.2.0] - 2026-04-11
 
 ### 🔄 Changed

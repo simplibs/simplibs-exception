@@ -1,8 +1,8 @@
+import pytest
+
+from simplibs.sentinels import UNSET
 from simplibs.exception.modes.SIMPLE import SIMPLE
 from simplibs.exception.modes.printers.dividers.DOUBLE_LINE import DOUBLE_LINE
-from simplibs.exception.SimpleExceptionData import SimpleExceptionData
-
-UNSET = SimpleExceptionData().value
 
 
 class _FullData:
@@ -32,17 +32,20 @@ class _EmptyData:
 
 
 def test_render_never_includes_decorative_double_lines():
-    result = SIMPLE.render(_FullData(), validate=False)
+    """Architectural Contract: Ensures that the plain text mode strictly suppresses all graphic double-line dividers."""
+    result = SIMPLE._render(_FullData())
     assert DOUBLE_LINE not in result
 
 
 def test_render_includes_header_with_label():
-    result = SIMPLE.render(_FullData(), validate=False)
+    """Validates that the output opens directly with the primary identity header and its attached human label."""
+    result = SIMPLE._render(_FullData())
     assert result.startswith("⚠️ ERROR: my-label")
 
 
 def test_render_includes_all_populated_fields():
-    result = SIMPLE.render(_FullData(), validate=False)
+    """Verifies seamless integration: all granular structured metadata fields must be compiled and aligned properly."""
+    result = SIMPLE._render(_FullData())
     assert "Message:   my message" in result
     assert "Expected:  expected thing" in result
     assert "Got:       42 (int)" in result
@@ -52,9 +55,11 @@ def test_render_includes_all_populated_fields():
 
 
 def test_render_handles_empty_data_gracefully():
-    result = SIMPLE.render(_EmptyData(), validate=False)
+    """Confirms that the absolute minimum dataset generates a clean, single-line identity fallback without blank lines."""
+    result = SIMPLE._render(_EmptyData())
     assert result == "⚠️ ERROR"
 
 
 def test_singleton_repr():
+    """Verifies that the stateless plain-text singleton instance exposes a clean, predictable string representation."""
     assert repr(SIMPLE) == "<SimpleMessage mode>"
