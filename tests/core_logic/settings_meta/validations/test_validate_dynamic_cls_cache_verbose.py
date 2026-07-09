@@ -8,6 +8,13 @@ from simplibs.exception._core_logic.settings_meta.validations.validate_dynamic_c
     validate_dynamic_cls_cache,
 )
 
+from simplibs.exception.testing.__new.assert_exception_function import assert_exception_function
+from simplibs.exception.testing.__new.assert_funkciton import (
+    assert_exception_function_callable,
+    assert_exception_function_raises,
+    assert_exception_function_valid_input
+)
+
 
 def test_validate_dynamic_cls_cache(subtests):
 
@@ -27,5 +34,6 @@ def test_validate_dynamic_cls_cache(subtests):
             "To clear this cache manually during hot-reloads or tests, assign an empty dict: "
             "SimpleExceptionSettings._dynamic_cls_cache = {}",
         ),
-        verbose=True
+        verbose=True,
+        intro=""
     )
