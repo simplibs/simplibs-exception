@@ -4,6 +4,14 @@ from .is_exception_function import is_exception_function
 from .manage_param import manage_param
 from .maybe_subtest import maybe_subtest
 
+__all__ = [
+    "compare_strings",
+    "is_exception_class",
+    "is_exception_function",
+    "manage_param",
+    "maybe_subtest",
+]
+
 _DESIGN_NOTES = """
 # Testing Automation Internal Helpers Engine
 

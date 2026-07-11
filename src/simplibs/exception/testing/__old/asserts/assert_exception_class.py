@@ -1,6 +1,6 @@
 from typing import Any
 # Inners
-from .asserts.classes import (
+from .classes import (
     assert_class_defaults,
     assert_class_constructor,
     assert_class_interface,
@@ -12,8 +12,7 @@ def assert_exception_class(
     subtests: Any,
     exc_class: type[Any],
     *,
-    exact_match: bool = False,
-    startswith: bool = False,
+    exact_match: bool = True,
     verbose: bool = True,
     verbose_constructor: bool = False,
     intro: str = "",
@@ -27,10 +26,12 @@ def assert_exception_class(
     Args:
         subtests: The native pytest subtests fixture manager instance.
         exc_class: Exception class to validate.
-        exact_match: If True, performs strict equality comparison.
-        startswith: If True, validates that the actual value starts with the expected value.
-        verbose: Enables pytest subtests separation for standard modules.
-        verbose_constructor: If True, expands individual constructor field checks.
+        exact_match: Enables fuzzy comparison lookups when False.
+        verbose: Enables pytest subtests separation for standard modules. Acts as a master
+            gate that completely overrides and suppresses verbose_constructor when False.
+        verbose_constructor: If True, expands individual internal constructor field checks
+            into independent pytest subtest keys, provided that global verbose is also True.
+            Defaults to False to prevent log clutter.
         intro: Optional prefix added to generated subtest names.
         deep_check: If True, triggers advanced explicit constructor propagation
             and serializer API interface audits.
@@ -48,12 +49,10 @@ def assert_exception_class(
     )
 
     # 2. Verify class-level default values and grab a vanilla instance
-    # Pass comparison control parameters; default behavior is substring inclusion
     exc = assert_class_defaults(
         subtests,
         exc_class,
         exact_match=exact_match,
-        startswith=startswith,
         verbose=verbose,
         intro=intro
     )
@@ -62,6 +61,7 @@ def assert_exception_class(
     if deep_check:
 
         # 3. Verify explicit constructor propagation with dynamic telemetry payloads.
+        # Master cascade logic: verbose_constructor is active ONLY IF global verbose is True.
         assert_class_constructor(
             subtests,
             exc_class,
@@ -86,20 +86,20 @@ _DESIGN_NOTES = """
 ## Purpose
 Implements an architectural Facade Pattern that orchestrates a complete, multi-stage compliance matrix 
 against any custom framework exception class definition. It serves as the primary master gateway 
-used by high-level automated matrix test runners.
+used by high-level automated matrix test runners (`bulk_tests.py`).
 
-## Comparison & Verbosity Orchestration
-The engine exposes granular control over validation logic and reporting:
+## Verbosity Hierarchy & Cascading Gate Logic
+To balance telemetry depth with test report cleanliness, this engine introduces a two-tier verbosity 
+hierarchy that isolates the massive constructor property check lane:
 
-1. **Comparison Control:** Defaults to substring inclusion (`in` operator). If stricter validation is 
-   required, the user must explicitly opt-in by setting `exact_match=True` (for full equality) 
-   or `startswith=True` (for prefix validation).
-2. **Verbosity Hierarchy:**
-   - **`verbose`:** The Master Gate controlling global reporting activity.
-   - **`verbose_constructor`:** The Fine-Tuning Gate. Only active if global `verbose` is True. 
-
-## Pipeline Composition
-The pipeline follows a strict dependency order:
-1. Inheritance (Contract) -> 2. Defaults (Vanilla State) -> 3. Constructor (Propagation) -> 4. Interface (API).
-This ensures that if the class fails fundamental structural tests, the framework fails-fast.
+1. **The Master Gate (`verbose`):** Governs the entire pipeline. If `verbose=False`, a strict global 
+   silence condition is enforced across all sub-modules. The vnitřní expression `verbose and verbose_constructor` 
+   guarantees that the constructor subtests are hard-suppressed, bypassing any local overrides.
+2. **The Local Fine-Tuning Gate (`verbose_constructor`):** Specifically addresses the constructor audit 
+   which verifies over 10 independent framework properties. 
+   - **`False` (Default):** The entire constructor block executes inside a single atomic assertion lane. 
+     This keeps bulk matrix execution logs free from extensive visual clutter.
+   - **`True`:** Expands each internal property check into an independent subtest key. This is a premium 
+     debugging mechanism designed to be manually toggled when a constructor propagation test fails 
+     and the developer needs to pinpoint exactly which telemetry string was corrupted or dropped.
 """
