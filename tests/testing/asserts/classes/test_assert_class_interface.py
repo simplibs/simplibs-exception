@@ -3,7 +3,7 @@ Tests for assert_class_interface — API contract verification for exception ser
 """
 import pytest
 from typing import Any
-from simplibs.exception.testing.asserts.asserts_classes.assert_class_interface import assert_class_interface
+from simplibs.exception.testing.asserts.classes.assert_class_interface import assert_class_interface
 
 
 # -----------------------------------------------------------------------------

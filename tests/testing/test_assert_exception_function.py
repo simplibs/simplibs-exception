@@ -1,5 +1,14 @@
+"""
+Tests for assert_exception_function — validation of the main orchestration engine pipeline.
+"""
+import sys
 import pytest
-from simplibs.exception.testing.asserts.assert_exception_function import assert_exception_function
+
+# We import the internal pytest outcome exception to catch explicit pytest.fail calls
+from _pytest.outcomes import Failed
+
+from simplibs.exception.testing.assert_exception_function import assert_exception_function
+
 
 # -----------------------------------------------------------------------------
 # Test Target Dummies
@@ -74,12 +83,17 @@ def test_exception_function_fails_on_wrong_exception_type():
     """Verify that the negative gate correctly catches type mismatches."""
     spy = SubtestNoOpSpy()
 
-    # Očekáváme ValueError, ale funkce vrací CustomException -> musí vyhodit AssertionError
-    with pytest.raises(AssertionError):
+    # -------------------------------------------------------------------------
+    # Guard Interception Verification
+    # -------------------------------------------------------------------------
+    # We expect the internal Framework Guard to trigger a hard fail via pytest.fail().
+    # This purposefully bypasses standard AssertionErrors to provide distinct diagnostic tips,
+    # raising an internal '_pytest.outcomes.Failed' exception.
+    with pytest.raises(Failed):
         assert_exception_function(
             spy,
             functional_target_custom,
-            exception_type=ValueError,
+            exception_type=ValueError,  # Intentionally wrong type to trigger the guard
             invalid_param=("bad",),
             verbose=False
         )

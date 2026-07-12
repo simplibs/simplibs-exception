@@ -1,7 +1,7 @@
 from typing import Any
 from simplibs.sentinels import UNSET, UnsetType
 # Outers
-from ...tools import maybe_subtest
+from ...tools import maybe_subtest, Param
 # Inners
 from ._utils import compare_strings
 
@@ -74,6 +74,7 @@ def assert_exception_fields(
             compare_strings(expected, exc.expected, exact_match=exact_match, startswith=startswith)
 
     if value is not UNSET:
+        value = value.value if isinstance(value, Param) else value
         with maybe_subtest(subtests, name=f"{intro}test_value", verbose=verbose):
             assert value == exc.value
 
@@ -130,4 +131,8 @@ The engine routes string-based attributes through a multi-modal comparator suppo
 ## Sentinel Protection Design
 Defaults to `UNSET` to allow selective validation. This explicitly distinguishes between 
 skipping an evaluation (`UNSET`) and asserting an explicit empty state (`None`/`""`).
+
+Additionally, the interface features an implicit unpacking mechanism for the `value` property: 
+if it encounters an explicit `Param` token, it transparently unwraps the inner data node before 
+comparison. This eliminates defensive type-checking logic from high-level test matrix suites.
 """

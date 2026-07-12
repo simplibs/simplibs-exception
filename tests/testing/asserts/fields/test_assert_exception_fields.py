@@ -2,9 +2,7 @@
 Tests for assert_exception_fields — attribute filtering, type matching, and sentinel evaluation.
 """
 import pytest
-from simplibs.sentinels import UNSET
-from simplibs.exception.testing.asserts.asserts_fields.assert_exception_fields import assert_exception_fields
-
+from simplibs.exception.testing.asserts.fields.assert_exception_fields import assert_exception_fields
 
 # -----------------------------------------------------------------------------
 # Test Target Dummies & Mocks

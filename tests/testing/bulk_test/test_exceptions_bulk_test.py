@@ -1,6 +1,6 @@
 import pytest
-from simplibs.exception.testing.exceptions_bulk_test import exceptions_bulk_test
-from simplibs.exception.testing.containers import TestCase
+from simplibs.exception.testing.bulk_test.exceptions_bulk_test import exceptions_bulk_test
+from simplibs.exception.testing.bulk_test.FunctionCase import FunctionCase
 from simplibs.exception import SimpleExceptionData
 
 
@@ -25,9 +25,7 @@ class SubtestNoOpSpy:
     """Mock subtests manager that acts as a container."""
 
     def test(self, name: str): return self
-
     def __enter__(self): return self
-
     def __exit__(self, exc_type, exc_val, exc_tb): return False
 
 
@@ -46,15 +44,14 @@ def test_bulk_test_orchestrator_routing():
         # 2. Functional invocation (Routing 3)
         (SimpleException, trigger_error, "bad"),
 
-        # 3. Encapsulated TestCase (Routing 1)
-        TestCase(
+        # 3. Encapsulated FunctionCase (Routing 1)
+        FunctionCase(
             func=trigger_error,
             invalid_param=("bad",),
             exception_type=SimpleException
         )
     ]
 
-    # Nyní, když SimpleException dědí ze SimpleExceptionData, routing projde
     exceptions_bulk_test(spy, matrix, verbose=False)
 
 

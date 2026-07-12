@@ -1,6 +1,9 @@
+"""
+Tests for assert_function_raises — validation of negative execution paths and framework guards.
+"""
 import pytest
 from simplibs.sentinels import UNSET
-from simplibs.exception.testing.asserts.asserts_functions.assert_function_raises import assert_function_raises
+from simplibs.exception.testing.asserts.functions.assert_function_raises import assert_function_raises
 
 
 # -----------------------------------------------------------------------------
@@ -16,11 +19,16 @@ def function_that_fails(value):
 
 
 class SubtestNoOpSpy:
-    def test(self, name: str): return self
+    """Mock spy bypassing the native pytest-subtests overhead during core testing."""
 
-    def __enter__(self): return self
+    def test(self, name: str):
+        return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb): return False
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
 
 
 # -----------------------------------------------------------------------------
@@ -47,19 +55,28 @@ def test_raises_verifies_correct_exception_type():
     assert isinstance(exc, TypeError)
 
 
-def test_raises_fails_on_incorrect_exception_type():
-    """Verify that it raises an assertion error if the raised type doesn't match the expectation."""
+def test_raises_fails_on_incorrect_exception_type_via_guard():
+    """Verify that an incorrect exception type triggers the hard-fail Framework Guard."""
     spy = SubtestNoOpSpy()
 
-    # Expecting ValueError, but function raises TypeError
-    with pytest.raises(AssertionError):
-        assert_function_raises(spy, function_that_fails, invalid_param=("trigger_type_error",), exception_type=ValueError)
+    # The Framework Guard triggers pytest.fail.Exception on mismatch instead of AssertionError
+    with pytest.raises(pytest.fail.Exception) as exc_info:
+        assert_function_raises(
+            spy,
+            function_that_fails,
+            invalid_param=("trigger_type_error",),
+            exception_type=ValueError
+        )
+
+    # Verify that the descriptive help tip is explicitly embedded in the failure payload
+    assert "[Framework Guard]" in exc_info.value.msg
+    assert "Param()" in exc_info.value.msg
 
 
 def test_raises_fails_if_no_exception_is_raised():
-    """Verify that it fails if the function completes successfully."""
+    """Verify that it fails if the target function completes successfully."""
     spy = SubtestNoOpSpy()
 
-    # function returns "success", so pytest.raises(BaseException) will fail
-    with pytest.raises(pytest.fail.Exception):  # Pytest raises failure if no exception occurs
+    # Function returns "success", so the underlying pytest.raises(BaseException) block will fail
+    with pytest.raises(pytest.fail.Exception):
         assert_function_raises(spy, function_that_fails, invalid_param=("valid_input",), exception_type=UNSET)

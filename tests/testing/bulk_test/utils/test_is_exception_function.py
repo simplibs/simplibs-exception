@@ -2,7 +2,7 @@
 Tests for is_exception_function — structural signature validation for exception-function test pairs.
 """
 import pytest
-from simplibs.exception.testing._helpers.is_exception_function import is_exception_function
+from simplibs.exception.testing.bulk_test._utils.is_exception_function import is_exception_function
 
 
 # -----------------------------------------------------------------------------

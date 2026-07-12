@@ -1,3 +1,6 @@
+"""
+Tests for validate_value_truncation_length — runtime validation of text preview truncation boundaries.
+"""
 import pytest
 
 from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionSettingsError import (
@@ -6,57 +9,71 @@ from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionSettingsE
 from simplibs.exception._core_logic.settings_meta.validations.validate_value_truncation_length import (
     validate_value_truncation_length,
 )
+from simplibs.exception.testing import assert_exception_function
+from simplibs.exception.testing.asserts.functions.assert_function_valid_input import assert_function_valid_input
 
 
-def test_positive_int_is_valid():
-    """Confirms that a standard positive integer is accepted to define the maximum character preview gate."""
-    assert validate_value_truncation_length(70) is None
+# -----------------------------------------------------------------------------
+# 1. Valid Input Matrix
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("valid_length", [1, 50, 100, 1000])
+def test_validate_value_truncation_length_valid_inputs(subtests, valid_length):
+    """Verify that the validator successfully permits strictly positive integer metrics."""
+    assert_function_valid_input(
+        subtests,
+        validate_value_truncation_length,
+        valid_param=valid_length,
+        verbose=False
+    )
 
 
-def test_zero_raises():
-    """Guarantees that a zero value is rejected, as truncating text down to zero characters is an invalid layout state."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_value_truncation_length(0)
+# -----------------------------------------------------------------------------
+# 2. Invalid Input Matrix — Type Pollution
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("invalid_type", [
+    "70",          # String representation
+    70.5,          # Float values
+    True, False,   # Boolean booby-traps (Python's implicit int subclasses)
+    None, ()
+])
+def test_validate_value_truncation_length_invalid_types(subtests, invalid_type):
+    """Verify that any non-integer input triggers a defensive type gate violation."""
+    assert_exception_function(
+        subtests,
+        validate_value_truncation_length,
+        invalid_param=invalid_type,
+        exception_type=SimpleExceptionSettingsError,
+        value=invalid_type,
+        label="VALUE_TRUNCATION_LENGTH",
+        expected="a positive integer (e.g., 50, 100, 200)",
+        problem="value is not an integer",
+        how_to_fix=(
+            "Pass an integer value — e.g., 100, 200, 500.",
+            "This value controls how many characters to show before truncating large values.",
+        ),
+    )
 
 
-def test_negative_raises():
-    """Ensures that negative integer constraints instantly trigger an error since buffer slices must strictly be positive."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_value_truncation_length(-5)
+# -----------------------------------------------------------------------------
+# 3. Invalid Input Matrix — Range Constraints
+# -----------------------------------------------------------------------------
 
-
-def test_bool_raises_even_though_it_is_technically_an_int():
-    """
-    Verifies the Defensive Type Gate: boolean flags (like True/False) must be strictly
-    intercepted and rejected, preventing them from satisfying the implicit integer subclassing checks.
-    """
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_value_truncation_length(True)
-
-
-def test_float_raises():
-    """Validates that float values trigger a validation error, safeguarding the core string slicer engine."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_value_truncation_length(70.5)
-
-
-def test_string_raises():
-    """Ensures that string representations of numbers are blocked fast, enforcing a rigid primitive type boundary."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_value_truncation_length("70")
-
-
-def test_error_payload_distinguishes_between_type_and_range_failures():
-    """
-    Architectural Contract: Verifies that the validator correctly routes failures,
-    populating the 'problem' metadata with specific diagnostics for types versus value bounds.
-    """
-    # 1. Inspect a type pollution failure scenario
-    with pytest.raises(SimpleExceptionSettingsError) as exc_type:
-        validate_value_truncation_length("invalid-type")
-    assert "value is not an integer" in exc_type.value.problem
-
-    # 2. Inspect a value range constraint failure scenario
-    with pytest.raises(SimpleExceptionSettingsError) as exc_range:
-        validate_value_truncation_length(-10)
-    assert "value is zero or negative" in exc_range.value.problem
+@pytest.mark.parametrize("invalid_range", [0, -1, -500])
+def test_validate_value_truncation_length_invalid_ranges(subtests, invalid_range):
+    """Verify that integers equal to or below zero trigger a value range boundary violation."""
+    assert_exception_function(
+        subtests,
+        validate_value_truncation_length,
+        invalid_param=invalid_range,
+        exception_type=SimpleExceptionSettingsError,
+        value=invalid_range,
+        label="VALUE_TRUNCATION_LENGTH",
+        expected="a positive integer greater than 0",
+        problem="value is zero or negative",
+        how_to_fix=(
+            "Pass a value greater than 0 — e.g., 50, 100.",
+            "Recommended: 50-200 depending on your terminal width and layout preference.",
+        ),
+    )

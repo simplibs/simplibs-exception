@@ -1,10 +1,12 @@
 from typing import Any
+
+from simplibs.sentinels import UNSET, UnsetType
 # Inners
 from .asserts.classes import (
-    assert_class_defaults,
     assert_class_constructor,
+    assert_class_defaults,
+    assert_class_inheritance,
     assert_class_interface,
-    assert_class_inheritance
 )
 
 
@@ -12,6 +14,7 @@ def assert_exception_class(
     subtests: Any,
     exc_class: type[Any],
     *,
+    expected_parents: type[Any] | tuple[type[Any], ...] | UnsetType = UNSET,
     exact_match: bool = False,
     startswith: bool = False,
     verbose: bool = True,
@@ -27,6 +30,8 @@ def assert_exception_class(
     Args:
         subtests: The native pytest subtests fixture manager instance.
         exc_class: Exception class to validate.
+        expected_parents: An optional class type or a tuple of class types that the target
+            exc_class must natively inherit from to satisfy custom polymorphic boundaries.
         exact_match: If True, performs strict equality comparison.
         startswith: If True, validates that the actual value starts with the expected value.
         verbose: Enables pytest subtests separation for standard modules.
@@ -43,6 +48,7 @@ def assert_exception_class(
     assert_class_inheritance(
         subtests,
         exc_class,
+        expected_parents=expected_parents,
         verbose=verbose,
         intro=intro
     )
@@ -94,12 +100,17 @@ The engine exposes granular control over validation logic and reporting:
 1. **Comparison Control:** Defaults to substring inclusion (`in` operator). If stricter validation is 
    required, the user must explicitly opt-in by setting `exact_match=True` (for full equality) 
    or `startswith=True` (for prefix validation).
-2. **Verbosity Hierarchy:**
+2. **Polymorphic Constraint Injection:** The `expected_parents` parameter bridges custom business architecture 
+   contracts directly into the baseline verification flow. It allows developers to assert deep 
+   polymorphic exception trapping (e.g., verifying an internal module exception can be intercepted via a generic 
+   subsystem error handling block).
+3. **Verbosity Hierarchy:**
    - **`verbose`:** The Master Gate controlling global reporting activity.
    - **`verbose_constructor`:** The Fine-Tuning Gate. Only active if global `verbose` is True. 
 
 ## Pipeline Composition
 The pipeline follows a strict dependency order:
 1. Inheritance (Contract) -> 2. Defaults (Vanilla State) -> 3. Constructor (Propagation) -> 4. Interface (API).
-This ensures that if the class fails fundamental structural tests, the framework fails-fast.
+This ensures that if the class fails fundamental structural tests, the framework fails-fast before initializing 
+dynamic reflection scanners.
 """

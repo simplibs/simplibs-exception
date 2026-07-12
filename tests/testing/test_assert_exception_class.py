@@ -5,11 +5,11 @@ import sys
 import pytest
 
 # Force bypassing the __init__.py function re-export to grab the actual file module object
-import simplibs.exception.testing.asserts.assert_exception_class as _raw_module
-assert_exception_class_mod = sys.modules["simplibs.exception.testing.asserts.assert_exception_class"]
+import simplibs.exception.testing.assert_exception_class as _raw_module
+assert_exception_class_mod = sys.modules["simplibs.exception.testing.assert_exception_class"]
 
 # Now extract the executable target from the verified module layer
-from simplibs.exception.testing.asserts.assert_exception_class import assert_exception_class
+from simplibs.exception.testing.assert_exception_class import assert_exception_class
 
 
 # -----------------------------------------------------------------------------
@@ -38,17 +38,19 @@ def test_full_pipeline_orchestration_under_deep_check(monkeypatch):
     """Verify that all four stages are sequentially invoked when deep_check is enabled."""
     tracker = PipelineTracker()
     subtests_dummy = "pytest-subtests-manager"
+    mock_parents = "mock-expected-parents-sentinel"
 
     # Patch the local references directly inside the target file module scope
+    # Přidán parametr expected_parents do signatury lambdy i do ukládaných kwargs
     monkeypatch.setattr(
         assert_exception_class_mod, "assert_class_inheritance",
-        lambda subtests, exc_class, verbose, intro: tracker.track(
-            "inheritance", verbose=verbose, intro=intro
+        lambda subtests, exc_class, expected_parents, verbose, intro: tracker.track(
+            "inheritance", expected_parents=expected_parents, verbose=verbose, intro=intro
         )
     )
     monkeypatch.setattr(
         assert_exception_class_mod, "assert_class_defaults",
-        lambda subtests, exc_class, exact_match, verbose, intro: tracker.track(
+        lambda subtests, exc_class, exact_match, startswith, verbose, intro: tracker.track(
             "defaults", verbose=verbose, intro=intro
         ) or "mock-vanilla-instance"
     )
@@ -65,9 +67,10 @@ def test_full_pipeline_orchestration_under_deep_check(monkeypatch):
         )
     )
 
-    # Trigger the orchestrator facade with deep_check active
+    # Trigger the orchestrator facade with deep_check active and explicit expected_parents
     result = assert_exception_class(
         subtests_dummy, DummyClass,
+        expected_parents=mock_parents,  # <-- Předáváme testovací sentinel
         exact_match=True,
         verbose=True,
         verbose_constructor=False,
@@ -86,6 +89,8 @@ def test_full_pipeline_orchestration_under_deep_check(monkeypatch):
     for call in tracker.calls:
         assert call["kwargs"]["intro"] == "namespace::"
 
+    # 4. Special verification: Check that expected_parents reached the inheritance stage perfectly
+    assert tracker.calls[0]["kwargs"]["expected_parents"] == mock_parents
 
 def test_deep_check_deactivation_skips_extended_structural_audits(monkeypatch):
     """Verify that disabling deep_check caps execution at inheritance and default values stages."""

@@ -1,3 +1,6 @@
+"""
+Tests for validate_location_blacklist — structural and element-level validation of filename exclusion filters.
+"""
 import pytest
 
 from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionSettingsError import (
@@ -6,56 +9,81 @@ from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionSettingsE
 from simplibs.exception._core_logic.settings_meta.validations.validate_location_blacklist import (
     validate_location_blacklist,
 )
+from simplibs.exception.testing import assert_exception_function
+from simplibs.exception.testing.asserts.functions.assert_function_valid_input import assert_function_valid_input
+from simplibs.exception.testing.tools.Param import Param
 
 
-def test_empty_tuple_is_valid():
-    """Confirms that an empty tuple is fully accepted, indicating no custom user-level file exclusions."""
-    assert validate_location_blacklist(()) is None
+# -----------------------------------------------------------------------------
+# 1. Valid Input Matrix
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("valid_input", [
+    (),                               # Native empty tuple pass-through
+    Param(("a.py", "b.py")),          # Populated tuple inside isolation guard
+    Param(("single_element.py",)),    # Single-element tuple inside guard
+])
+def test_validate_location_blacklist_valid_input(subtests, valid_input):
+    """Verify that the validator successfully permits empty tuples and tuples consisting entirely of strings."""
+    assert_function_valid_input(
+        subtests,
+        validate_location_blacklist,
+        valid_param=valid_input,
+        verbose=False
+    )
 
 
-def test_tuple_of_strings_is_valid():
-    """Validates that a tuple consisting entirely of raw strings passes inspection successfully."""
-    assert validate_location_blacklist(("a.py", "b.py")) is None
+# -----------------------------------------------------------------------------
+# 2. Invalid Input Matrix — Type Pollution (Container Level)
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("invalid_container", [
+    Param(["a.py", "b.py"]),          # Populated list requires explicit Param packaging but fails structural type check
+    "a.py",                           # Raw string primitive
+    123,                              # Numeric primitive
+    Param({"a.py", "b.py"}),          # Native set container
+    Param({"key": "value"}),          # Native dictionary container
+])
+def test_validate_location_blacklist_invalid_container(subtests, invalid_container):
+    """Verify that non-tuple data types trigger a structural constraint error enforcing an immutable boundary."""
+    assert_exception_function(
+        subtests,
+        validate_location_blacklist,
+        invalid_param=invalid_container,
+        exception_type=SimpleExceptionSettingsError,
+        value=invalid_container,
+        label="LOCATION_BLACKLIST",
+        expected="tuple[str, ...] — a tuple of strings containing filename patterns",
+        problem="value is not a tuple",
+        how_to_fix=(
+            "Wrap the value in a tuple: ('filename.py',)",
+            "To set an empty blacklist use an empty tuple: ()",
+        ),
+    )
 
 
-def test_non_tuple_raises():
-    """
-    Guarantees that other iterable collections (like lists) are blocked fast,
-    enforcing an immutable data boundary for the trace engine.
-    """
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_location_blacklist(["a.py", "b.py"])
+# -----------------------------------------------------------------------------
+# 3. Invalid Input Matrix — Element Constraints (Deep-Scan Evaluation)
+# -----------------------------------------------------------------------------
 
-
-def test_tuple_with_non_string_items_raises():
-    """
-    Verifies the Element Deep-Scan pattern: any invalid data types inside the tuple
-    must be aggregated and reported simultaneously within the error payload.
-    """
-    with pytest.raises(SimpleExceptionSettingsError) as exc_info:
-        validate_location_blacklist(("a.py", 123, None))
-
-    # The exception must collect and expose all offending elements at once
-    assert exc_info.value.value == [123, None]
-
-
-def test_string_instead_of_tuple_raises():
-    """Ensures that passing a raw string instead of an enclosed tuple is intercepted before it can pollute the engine."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_location_blacklist("a.py")
-
-
-def test_error_payload_contains_accurate_deep_scan_counts():
-    """
-    Architectural Contract: Verifies that the raised exception dynamically tracks
-    and states the exact number of type-polluting items found during the deep-scan cycle.
-    """
-    with pytest.raises(SimpleExceptionSettingsError) as exc_info:
-        # Supplying exactly 3 invalid non-string items
-        validate_location_blacklist((1, 2, 3))
-
-    err = exc_info.value
-
-    assert err.label == "LOCATION_BLACKLIST"
-    # Ensure the dynamic counter injected the correct number into the diagnostics
-    assert "found 3 invalid item(s)" in err.problem
+@pytest.mark.parametrize("polluted_sequence, expected_extracted_errors", [
+    (Param(("a.py", 123, None)), [123, None]),          # Standard mixed pollution
+    (Param((True, "b.py")), [True]),                    # Boolean booby-trap (subclass of int)
+    (Param(((1, 2), "a.py")), [(1, 2)]),                 # Nested tuple pollution
+])
+def test_validate_location_blacklist_polluted_elements(subtests, polluted_sequence, expected_extracted_errors):
+    """Verify that a deep-scan aggregates and reports all non-string elements inside the tuple simultaneously."""
+    assert_exception_function(
+        subtests,
+        validate_location_blacklist,
+        invalid_param=polluted_sequence,
+        exception_type=SimpleExceptionSettingsError,
+        value=expected_extracted_errors,
+        label="LOCATION_BLACKLIST",
+        expected="a tuple containing only string elements",
+        problem="tuple contains invalid non-string elements",
+        how_to_fix=(
+            "Check all items — each one must be a string (str).",
+            "Each item defines a file name pattern that will be skipped during location resolution.",
+        ),
+    )

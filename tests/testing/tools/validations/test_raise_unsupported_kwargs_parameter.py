@@ -3,8 +3,7 @@ Tests for raise_unsupported_kwargs_parameter — validation routing and error pa
 """
 import pytest
 from simplibs.exception._core_logic.internal_exceptions import SimpleExceptionSettingsError
-from simplibs.exception.testing.containers._validations.raise_unsupported_kwargs_parameter import raise_unsupported_kwargs_parameter
-
+from simplibs.exception.testing.tools._validations.raise_unsupported_kwargs_parameter import raise_unsupported_kwargs_parameter
 
 # -----------------------------------------------------------------------------
 # Test Target Dummies

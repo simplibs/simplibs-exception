@@ -1,5 +1,5 @@
-import pytest
 from typing import Any, Callable
+import pytest
 from simplibs.sentinels import UNSET, UnsetType
 # Outers
 from ...tools import maybe_subtest
@@ -22,15 +22,15 @@ def assert_function_raises(
 ) -> BaseException:
     """Assert that a function raises an exception when invoked with invalid parameters.
 
-    Normalizes the invalid parameter block, invokes the target callable, and verifies 
-    that an exception is triggered. Optionally validates the exact type of the raised 
+    Normalizes the invalid parameter block, invokes the target callable, and verifies
+    that an exception is triggered. Optionally validates the exact type of the raised
     exception against an expected type or tuple of types.
 
     Args:
         subtests: The native pytest subtests fixture manager instance.
         func: The target function or callable under test.
         invalid_param: The raw parameter payload designed to trigger an execution failure.
-        exception_type: Expected exception class or a tuple of valid exception classes. 
+        exception_type: Expected exception class or a tuple of valid exception classes.
             If UNSET, any exception deriving from BaseException satisfies the check.
         verbose: Enables isolated pytest subtest logging layout tracking.
         intro: Optional prefix string added to the generated subtest identity name.
@@ -38,7 +38,6 @@ def assert_function_raises(
     Returns:
         The caught exception instance for downstream field inspection.
     """
-
     # Extract standard execution components (*args, **kwargs) from the input wrapper
     args, kwargs = manage_param(invalid_param)
 
@@ -56,12 +55,31 @@ def assert_function_raises(
 
     # 2. Verify that the triggered exception matches the specific expected type mapping
     if exception_type is not UNSET:
+        # Framework Guard: If the raised error type is fundamentally unexpected (e.g., a native TypeError
+        # caused by bad signature mapping), we must issue a hard-fail immediately. Continuing into
+        # downstream telemetry checks would trigger misleading AttributeError chains on the native error object.
+        exception_type: type[BaseException] | tuple[type[BaseException], ...]
+        if not isinstance(exc, exception_type):
+            expected_names = (
+                exception_type.__name__
+                if isinstance(exception_type, type)
+                else ", ".join(t.__name__ for t in exception_type)
+            )
+            pytest.fail(
+                f"\n[Framework Guard] Target function raised an unexpected exception type!\n"
+                f"Expected: {expected_names}\n"
+                f"Actual:   {type(exc).__name__} ({exc})\n\n"
+                f"💡 Tip: If you received a TypeError about positional arguments, "
+                f"you probably forgot to wrap your collection parameter into a 'Param()' guard."
+            )
+
+        # Re-verify within the subtest context for standard report logging
         with maybe_subtest(
             subtests,
             name=f"{intro}test_exception_type",
             verbose=verbose,
         ):
-            # noinspection PyTypeChecker
+            exception_type: type[BaseException] | tuple[type[BaseException], ...]
             assert isinstance(exc, exception_type)
 
     return exc
@@ -80,9 +98,11 @@ guaranteed exception interception, and strict type verification into a clean, re
 2. **Interception Guard (`pytest.raises`):** Forces the core execution block inside a master 
    Python `BaseException` net. Because this guard is nested directly inside the bi-modal 
    `maybe_subtest` engine, it handles failure state analysis consistently across both verbose and fast-pass CI lanes.
-3. **Type Blueprint Matching:** Extracts the underlying instance (`exc_info.value`) and checks its 
-   lineage via `isinstance`. By keeping this check independent from the initial catch block, it isolates 
-   "failure to raise anything" from "raised the wrong error type" inside the reporting logs.
+3. **Framework Guard & Type Blueprint Matching:** Extracts the underlying instance (`exc_info.value`) 
+   and performs a pre-flight lineage validation. If the caught error diverges from `exception_type`, 
+   the engine actively aborts execution using `pytest.fail`. This hard stop prevents cascading, 
+   unreadable `AttributeError` exceptions from running inside subsequent field-telemetry blocks 
+   when a function unexpectedly throws standard runtime signature errors (e.g., `TypeError`).
 
 ## Downstream Fluid Interface Design
 By returning the raw caught `BaseException` instance, this function acts as an ideal conduit for 

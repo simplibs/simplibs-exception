@@ -1,3 +1,6 @@
+"""
+Tests for validate_get_location — validation of hybrid boolean flags and non-negative integer stack depths.
+"""
 import pytest
 
 from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionSettingsError import (
@@ -6,48 +9,76 @@ from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionSettingsE
 from simplibs.exception._core_logic.settings_meta.validations.validate_get_location import (
     validate_get_location,
 )
+from simplibs.exception.testing import assert_exception_function
+from simplibs.exception.testing.asserts.functions.assert_function_valid_input import assert_function_valid_input
 
 
-def test_bool_true_is_valid():
-    """Confirms that boolean True is accepted to globally activate call-site location reporting."""
-    assert validate_get_location(True) is None
+# -----------------------------------------------------------------------------
+# 1. Valid Input Matrix
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("valid_input", [
+    True, False,  # Standard boolean toggle switches
+    0, 1, 5,      # Non-negative frame depth offsets (integers)
+])
+def test_validate_get_location_valid_input(subtests, valid_input):
+    """Verify that the validator successfully permits all valid types and non-negative boundary values."""
+    assert_function_valid_input(
+        subtests,
+        validate_get_location,
+        valid_param=valid_input,
+        verbose=False
+    )
 
 
-def test_bool_false_is_valid():
-    """Confirms that boolean False is accepted to globally deactivate call-site location reporting."""
-    assert validate_get_location(False) is None
+# -----------------------------------------------------------------------------
+# 2. Invalid Input Matrix — Type Pollution
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("invalid_type", [
+    "bad-value",  # String primitive
+    2.5,          # Float values (even positive ones fail the exact type check)
+    None,         # Void object
+    (), []        # Empty structural containers
+])
+def test_validate_get_location_invalid_types(subtests, invalid_type):
+    """Verify that passing an invalid type triggers a type-pollution settings error."""
+    assert_exception_function(
+        subtests,
+        validate_get_location,
+        invalid_param=invalid_type,
+        exception_type=SimpleExceptionSettingsError,
+        value=invalid_type,
+        label="GET_LOCATION",
+        expected="int or bool (e.g., True, False, 1, 2)",
+        problem="value is neither a boolean nor an integer",
+        how_to_fix=(
+            "Pass True or False to enable or disable location reporting.",
+            "Pass a positive int to set the stack depth traversal limit (e.g., 1, 2).",
+        ),
+    )
 
 
-def test_positive_int_is_valid():
-    """Validates that a positive integer is permitted to explicitly set a customized stack depth limit."""
-    assert validate_get_location(3) is None
+# -----------------------------------------------------------------------------
+# 3. Invalid Input Matrix — Range Constraints
+# -----------------------------------------------------------------------------
 
-
-def test_string_raises():
-    """Guarantees that string-based numeric representations are blocked, preventing dynamic parsing ambiguities."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_get_location("1")
-
-
-def test_none_raises():
-    """Ensures that explicit None assignments are strictly intercepted, as global settings require a concrete runtime fallback."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_get_location(None)
-
-
-def test_float_raises():
-    """Verifies that floats are instantly rejected, since a non-integer stack frame lookup offset is programmatically invalid."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_get_location(1.5)
-
-
-def test_boundary_integer_values_are_permitted_by_type_inspector():
-    """
-    Architectural Edge Case: Verifies that boundary integer layouts (such as zero
-    and negative offsets) successfully pass through the validation filter without raising an error.
-    """
-    # Zero represents a structurally valid reference (the immediate execution frame anchor)
-    assert validate_get_location(0) is None
-
-    # Negative integers are permitted by the type signature for relative context mapping shifts
-    assert validate_get_location(-1) is None
+@pytest.mark.parametrize("invalid_range", [
+    -1, -100, -9999
+])
+def test_validate_get_location_invalid_ranges(subtests, invalid_range):
+    """Verify that passing a negative integer triggers a value-boundary check rejecting invalid stack depth."""
+    assert_exception_function(
+        subtests,
+        validate_get_location,
+        invalid_param=invalid_range,
+        exception_type=SimpleExceptionSettingsError,
+        value=invalid_range,
+        label="GET_LOCATION",
+        expected="a non-negative integer (>= 0) or bool",
+        problem="integer depth offset cannot be negative",
+        how_to_fix=(
+            "Pass a positive integer or 0 to define a valid stack traversal depth.",
+            "Negative numbers are not supported by the Python frame inspection engine."
+        )
+    )

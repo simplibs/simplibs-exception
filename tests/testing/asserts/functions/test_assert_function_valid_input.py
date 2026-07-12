@@ -1,5 +1,6 @@
 import pytest
-from simplibs.exception.testing.asserts.asserts_functions.assert_function_valid_input import assert_function_valid_input
+from simplibs.exception.testing.asserts.functions.assert_function_valid_input import assert_function_valid_input
+from simplibs.exception.testing.tools import Kwargs
 
 
 # -----------------------------------------------------------------------------
@@ -54,6 +55,4 @@ def test_valid_input_handles_kwargs_via_manage_param():
         assert kwargs["key"] == "value"
 
     # We rely on manage_param to handle the Kwargs object conversion
-    # Assuming standard Kwargs usage:
-    from simplibs.exception.testing.containers import Kwargs
     assert_function_valid_input(spy, verify_kwargs, valid_param=Kwargs(key="value"), verbose=False)

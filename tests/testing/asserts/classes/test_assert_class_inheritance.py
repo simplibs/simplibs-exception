@@ -4,8 +4,7 @@ Tests for assert_class_inheritance — verification of mandatory base class inhe
 import pytest
 from typing import Any
 from simplibs.exception.SimpleExceptionData import SimpleExceptionData
-from simplibs.exception.testing.asserts.asserts_classes.assert_class_inheritance import assert_class_inheritance
-
+from simplibs.exception.testing.asserts.classes.assert_class_inheritance import assert_class_inheritance
 
 # -----------------------------------------------------------------------------
 # Test Target Dummies & Mocks
@@ -23,6 +22,21 @@ class NativeOnlyException(Exception):
 
 class NotAnException:
     """Non-compliant: a standard python class object completely foreign to error hierarchies."""
+    pass
+
+
+class CustomBaseGroup(SimpleExceptionData, Exception):
+    """Abstract dynamic parent layer representing a specialized error family."""
+    pass
+
+
+class InheritedFromGroup(CustomBaseGroup):
+    """Compliant child: Natively belongs to the CustomBaseGroup family tree."""
+    pass
+
+
+class UnrelatedGroup(SimpleExceptionData, Exception):
+    """Non-compliant child: Correct framework error, but foreign to CustomBaseGroup."""
     pass
 
 
@@ -67,3 +81,33 @@ def test_inheritance_fails_for_arbitrary_non_exception_types():
     # Must raise AssertionError right on step 1 (BaseException alignment check)
     with pytest.raises(AssertionError):
         assert_class_inheritance(spy, NotAnException, verbose=False)
+
+
+def test_inheritance_passes_when_custom_expected_parents_are_satisfied():
+    """Verify that validation passes when the class correctly derives from explicit parent targets."""
+    spy = SubtestNoOpSpy()
+
+    # Should pass cleanly because InheritedFromGroup is a subclass of CustomBaseGroup
+    result = assert_class_inheritance(
+        spy,
+        InheritedFromGroup,
+        expected_parents=CustomBaseGroup,
+        verbose=False
+    )
+
+    assert result is InheritedFromGroup
+
+
+def test_inheritance_fails_when_custom_expected_parents_are_breached():
+    """Verify that validation strictly triggers AssertionError when custom polymorphic rules fail."""
+    spy = SubtestNoOpSpy()
+
+    # Must raise AssertionError on step 3 (custom polymorphic parents check)
+    # because UnrelatedGroup does NOT derive from CustomBaseGroup
+    with pytest.raises(AssertionError):
+        assert_class_inheritance(
+            spy,
+            UnrelatedGroup,
+            expected_parents=CustomBaseGroup,
+            verbose=False
+        )

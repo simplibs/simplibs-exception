@@ -3,8 +3,7 @@ Tests for assert_class_defaults — reflection-driven auditing of static class m
 """
 import pytest
 from typing import Any
-from simplibs.exception.testing.asserts.asserts_classes.assert_class_defaults import assert_class_defaults
-
+from simplibs.exception.testing.asserts.classes.assert_class_defaults import assert_class_defaults
 
 # -----------------------------------------------------------------------------
 # Test Target Dummies & Mocks

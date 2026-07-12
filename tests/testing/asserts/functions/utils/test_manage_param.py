@@ -1,8 +1,9 @@
 """
 Tests for manage_param — normalization of raw dynamic parameters into executable args and kwargs.
 """
-from simplibs.exception.testing.containers.Kwargs import Kwargs
-from simplibs.exception.testing._helpers.manage_param import manage_param
+from simplibs.exception.testing.tools.Kwargs import Kwargs
+from simplibs.exception.testing.tools.Param import Param
+from simplibs.exception.testing.asserts.functions._utils.manage_param import manage_param
 
 
 # -----------------------------------------------------------------------------
@@ -44,21 +45,35 @@ def test_sequence_with_trailing_kwargs_unpacks_correctly():
     assert kwargs == {"verbose": True, "retries": 3}
 
 
-def test_empty_sequence_encapsulates_as_positional_payload():
-    """Verify that an empty sequence is preserved as a singular positional argument."""
-    # Empty tuple
-    args, kwargs = manage_param(())
-    assert args == ((),)
+def test_sequence_deep_scan_unwraps_nested_param_guards():
+    """Verify that sequence routing automatically unwarps any embedded Param guards found inside slots."""
+    param = ("mock-cls", Param(("a.py", "b.py")), Kwargs(strict=True))
+    args, kwargs = manage_param(param)
+
+    # The inner tuple must be cleanly unwrapped as a single item inside the args tuple
+    assert args == ("mock-cls", ("a.py", "b.py"))
+    assert kwargs == {"strict": True}
+
+
+# -----------------------------------------------------------------------------
+# 3. Standalone Param Isolation Guard
+# -----------------------------------------------------------------------------
+
+def test_standalone_param_unwraps_collections_safely():
+    """Verify that wrapping a collection in Param protects it from flattening, delivering it as a single unit."""
+    # Standalone full tuple
+    args, kwargs = manage_param(Param(("a.py", "b.py")))
+    assert args == (("a.py", "b.py"),)
     assert kwargs == {}
 
-    # Empty list
-    args, kwargs = manage_param([])
-    assert args == ([],)
+    # Standalone empty tuple
+    args, kwargs = manage_param(Param(()))
+    assert args == ((),)
     assert kwargs == {}
 
 
 # -----------------------------------------------------------------------------
-# 3. Scalar & Raw Dictionary Fallback
+# 4. Scalar & Raw Dictionary Fallback
 # -----------------------------------------------------------------------------
 
 def test_scalars_and_primitives_wrap_into_single_item_args():

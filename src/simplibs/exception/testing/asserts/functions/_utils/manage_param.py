@@ -1,6 +1,7 @@
 from typing import Any
-# Outers
-from ....tools import Kwargs
+# Inners
+from ....tools import Kwargs, Param
+
 
 
 def manage_param(
@@ -11,15 +12,14 @@ def manage_param(
     Unpacks the provided parameter block into a structured `(args, kwargs)` tuple
     suitable for clean programmatical function invocation (`func(*args, **kwargs)`).
     """
-
     args: tuple[Any, ...] = ()
     kwargs: dict[str, Any] = {}
 
-    # 1. Map explicit semantic keyword wrappers directly to keyword argument spaces
+    # Scenario 1: Standalone keyword arguments token wrapper
     if isinstance(param, Kwargs):
         kwargs = dict(param)
 
-    # 2. Flatten sequences into standard positional argument tuples with trailing check
+    # Scenario 2: Sequence router handling multi-argument positional execution rows
     elif isinstance(param, (tuple, list)):
         if param:
             if isinstance(param[-1], Kwargs):
@@ -31,9 +31,12 @@ def manage_param(
         else:
             args = (param,)
 
-    # 3. Encapsulate scalars, primitives, or raw dictionaries as single-item positional payloads
+        # Deep-Scan Clean: Unwrap any encapsulated atomic Param guards discovered inside the sequence
+        args = tuple(i.value if isinstance(i, Param) else i for i in args)
+
+    # Scenario 3: Standard atomic scalar payload or a standalone Param guard fallback
     else:
-        args = (param,)
+        args = (param.value,) if isinstance(param, Param) else (param,)
 
     return args, kwargs
 
@@ -49,18 +52,25 @@ testing macros to evaluate verification targets with diverse signature requireme
 ## Conversion & Mapping Rules (Strict Determinism)
 
 ### 1. Explicit Keyword Wrapper (`Kwargs`)
-Naked or trailing `Kwargs` instances are explicitly mapped into the `kwargs` dictionary space for 
-named parameter injection. Raw Python dictionaries (`dict`) are **never** automatically expanded into 
-keyword arguments.
+Standalone `Kwargs` tokens are explicitly mapped into the `kwargs` dictionary space for named parameter 
+injection. Raw Python dictionaries (`dict`) are **never** automatically expanded into keyword arguments.
 
 ### 2. Sequence Mapping (`tuple` / `list`)
-Populated lists or tuples are converted into an immutable positional `args` chain. If the last 
-element within the sequence is a `Kwargs` token, it is extracted and unpacked into `kwargs`, while all 
-preceding items become positional arguments. Empty sequences are wrapped into a literal positional tuple 
-to protect empty container testing layers.
+Populated lists or tuples represent multi-positional argument vectors. If the last element within the 
+sequence is a `Kwargs` token, it is extracted and unpacked into `kwargs`, while all preceding items 
+form the core positional `args` chain. 
 
-### 3. Scalar & Dictionary Fallback
-Any standard primitive, object instance, or raw dictionary (`dict`) is treated strictly as a singular 
-literal positional payload. This guarantees that functions accepting an ordinary mapping or configuration 
-dictionary can be tested cleanly without accidental keyword expansion errors.
+Empty lists or tuples are automatically treated as a single literal positional payload (i.e., preserved 
+as an empty container argument) to easily support testing of empty sequence validation layers without 
+requiring explicit wrapper initialization.
+
+A deep-scan post-processing pass evaluates every extracted positional slot. If a slot contains an 
+isolated `Param` guard, its inner value is transparently extracted, allowing multi-argument functions 
+to accept raw container types natively without triggering flattening operations.
+
+### 3. Scalar & Atomic Fallback
+Any standard primitive, object instance, raw configuration dictionary (`dict`), or a standalone `Param` 
+isolation guard is captured strictly as a singular literal positional payload. Standalone `Param` blocks 
+unwrap their payload immediately here, guaranteeing that collections intended as single inputs pass through 
+the sequence router safely without being broken apart into separate positional components.
 """

@@ -3,7 +3,7 @@ Tests for maybe_subtest — conditional pytest-subtests routing and execution pa
 """
 import pytest
 from typing import Any
-from simplibs.exception.testing._helpers.maybe_subtest import maybe_subtest
+from simplibs.exception.testing.tools.maybe_subtest import maybe_subtest
 
 
 # -----------------------------------------------------------------------------

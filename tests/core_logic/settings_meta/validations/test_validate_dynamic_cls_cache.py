@@ -1,3 +1,6 @@
+"""
+Tests for validate_dynamic_cls_cache — validation of the internal multi-inheritance class cache.
+"""
 import pytest
 
 from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionSettingsError import (
@@ -6,50 +9,39 @@ from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionSettingsE
 from simplibs.exception._core_logic.settings_meta.validations.validate_dynamic_cls_cache import (
     validate_dynamic_cls_cache,
 )
+from simplibs.exception.testing import assert_exception_function
 
 
-def test_empty_dict_is_valid():
-    """Confirms that an empty dictionary is permitted, enabling safe system state invalidation cycles."""
-    assert validate_dynamic_cls_cache({}) is None
+# -----------------------------------------------------------------------------
+# Invalid Input Matrix — Type Pollution & State Constraints
+# -----------------------------------------------------------------------------
 
+@pytest.mark.parametrize("invalid_cache_state", [
+    "bad-value",           # String primitive
+    123,                   # Numeric primitive
+    None,                  # Void object
+    [], (),                # Other structural containers
+    {"cached_key": str},   # Non-empty dict (CRITICAL: manual mutation attempt)
+])
+def test_validate_dynamic_cls_cache(subtests, invalid_cache_state):
+    """Verify that any non-empty dict or invalid data type triggers a protective state violation.
 
-def test_non_empty_dict_raises():
-    """Guarantees that attempting to overwrite the cache registry with populated data blocks triggers a settings error."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_dynamic_cls_cache({"key": "value"})
-
-
-def test_non_dict_value_raises():
-    """Ensures that passing completely foreign primitive types instantly trips the state machine guardrail."""
-    with pytest.raises(SimpleExceptionSettingsError):
-        validate_dynamic_cls_cache("not-a-dict")
-
-
-def test_error_mentions_reset_method():
+    NOTE: An empty dictionary `{}` represents the only single permissible state for manual resets
+          and is explicitly verified via the `valid_param` interceptor.
     """
-    Verifies UX quality: the generated error payload must explicitly guide the engineer
-    toward using the public 'reset()' API method for safe framework teardowns.
-    """
-    with pytest.raises(SimpleExceptionSettingsError) as exc_info:
-        validate_dynamic_cls_cache("invalid")
-
-    how_to_fix = exc_info.value.how_to_fix
-    joined = how_to_fix if isinstance(how_to_fix, str) else " ".join(how_to_fix)
-
-    assert "reset()" in joined
-
-
-def test_error_payload_contains_precise_cache_diagnostic_metadata():
-    """
-    Architectural Contract: Verifies that the raised internal exception contains
-    the exact structural metadata keys required for rendering the cache mutation failure.
-    """
-    with pytest.raises(SimpleExceptionSettingsError) as exc_info:
-        validate_dynamic_cls_cache("corrupt-payload")
-
-    err = exc_info.value
-
-    # Assert strict layout definitions to guarantee intuitive terminal logs
-    assert err.label == "_dynamic_cls_cache"
-    assert "an empty dict {}" in err.expected
-    assert "multi-inheritance class cache is handled internally" in err.problem
+    assert_exception_function(
+        subtests,
+        validate_dynamic_cls_cache,
+        invalid_param=invalid_cache_state,
+        valid_param={},  # Gold-standard verification of the only valid input state
+        exception_type=SimpleExceptionSettingsError,
+        value=invalid_cache_state,
+        label="_dynamic_cls_cache",
+        expected="an empty dict {} — for configuration and state reset routines only",
+        problem="the multi-inheritance class cache is handled internally and cannot be manually overwritten",
+        how_to_fix=(
+            "To wipe the framework runtime state safely, invoke: SimpleExceptionSettings.reset()",
+            "To clear this cache manually during hot-reloads or tests, assign an empty dict: "
+            "SimpleExceptionSettings._dynamic_cls_cache = {}",
+        ),
+    )

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 from simplibs.sentinels import UNSET, UnsetType
 # Outers
-from ..asserts import assert_exception_function
+from ..assert_exception_function import assert_exception_function
 
 
 @dataclass(slots=True, kw_only=True)

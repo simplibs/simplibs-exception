@@ -2,7 +2,7 @@
 Tests for is_exception_class — type guard evaluation for exception class blueprints.
 """
 import pytest
-from simplibs.exception.testing._helpers.is_exception_class import is_exception_class
+from simplibs.exception.testing.bulk_test._utils.is_exception_class import is_exception_class
 
 
 # -----------------------------------------------------------------------------

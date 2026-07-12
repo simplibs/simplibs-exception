@@ -2,7 +2,7 @@
 Tests for assert_function_callable — validation of target execution interfaces.
 """
 import pytest
-from simplibs.exception.testing.asserts.asserts_functions.assert_function_callable import assert_function_callable
+from simplibs.exception.testing.asserts.functions.assert_function_callable import assert_function_callable
 
 
 # -----------------------------------------------------------------------------

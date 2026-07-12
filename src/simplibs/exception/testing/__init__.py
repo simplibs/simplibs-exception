@@ -3,7 +3,7 @@ from .assert_exception_function import assert_exception_function
 
 from .bulk_test import exceptions_bulk_test, FunctionCase
 
-from .tools import Kwargs, maybe_subtest
+from .tools import Kwargs, maybe_subtest, Param
 
 from .asserts import (
     assert_exception_fields,
@@ -28,6 +28,7 @@ __all__ = [
     # Utility Components
     "Kwargs",
     "maybe_subtest",
+    "Param",
 
     # Low-Level Assertions
     "assert_exception_fields",
@@ -79,6 +80,7 @@ Infrastructure helpers shared across the testing framework.
 | :-------------- | :----------------------------------------------------------------------- |
 | `Kwargs`        | Explicit wrapper for keyword arguments inside parameterized test inputs.  |
 | `maybe_subtest` | Context manager enabling optional pytest subtests with zero overhead.     |
+| `Param`         | Explicit isolation guard for protecting a single parameter collection.   |
 
 
 ## Low-Level Assertions

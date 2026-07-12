@@ -2,9 +2,10 @@
 Tests for TestCase — declarative scenario storage and execution proxy routing.
 """
 import pytest
+import sys
 from typing import Any
 from simplibs.sentinels import UNSET
-from simplibs.exception.testing.containers.TestCase import TestCase
+from simplibs.exception.testing.bulk_test.FunctionCase import FunctionCase
 
 
 # -----------------------------------------------------------------------------
@@ -39,9 +40,9 @@ class AssertFunctionSpy:
 # Unit Tests
 # -----------------------------------------------------------------------------
 
-def test_test_case_stores_and_decouples_static_expectation_blueprint():
+def test_function_case_stores_and_decouples_static_expectation_blueprint():
     """Verify that the dataclass correctly mounts all declarative attributes and defaults."""
-    case = TestCase(
+    case = FunctionCase(
         func=dummy_logic_gate,
         exception_type=MockException,
         label="io-subsystem",
@@ -69,13 +70,25 @@ def test_run_test_proxies_entire_payload_down_to_assertion_engine(monkeypatch):
     """Verify that run_test seamlessly unpacks and forwards properties to assert_exception_function."""
     spy = AssertFunctionSpy()
 
-    # Monkeypatch the imported assertion handler inside the TestCase module location
+    # -------------------------------------------------------------------------
+    # Namespace Interception (Monkeypatch Setup)
+    # -------------------------------------------------------------------------
+    # Resolve the underlying module object dynamically via sys.modules.
+    # This bypasses namespace collisions where the local 'FunctionCase' identifier
+    # refers to the dataclass type rather than the raw module container.
+    module = sys.modules[FunctionCase.__module__]
+
+    # Intercept the localized assertion function inside the target module
     monkeypatch.setattr(
-        "simplibs.exception.testing.containers.TestCase.assert_exception_function",
-        spy
+        module,
+        "assert_exception_function",
+        spy,
     )
 
-    case = TestCase(
+    # -------------------------------------------------------------------------
+    # Scenario Configuration & Execution
+    # -------------------------------------------------------------------------
+    case = FunctionCase(
         func=dummy_logic_gate,
         exception_type=MockException,
         label="network-layer",
@@ -86,7 +99,7 @@ def test_run_test_proxies_entire_payload_down_to_assertion_engine(monkeypatch):
 
     fake_subtests_manager = "pytest-subtests-fixture-instance"
 
-    # Trigger execution routing block
+    # Trigger execution routing block to proxy the payload downstream
     live_exc = case.run_test(
         subtests=fake_subtests_manager,
         exact_match=False,
@@ -95,10 +108,13 @@ def test_run_test_proxies_entire_payload_down_to_assertion_engine(monkeypatch):
         deep_check=False
     )
 
+    # -------------------------------------------------------------------------
+    # Assertions & Verification
+    # -------------------------------------------------------------------------
     # Verify return value matches downstream engine payload mapping
     assert isinstance(live_exc, MockException)
 
-    # Validate that all structured properties were delegated correctly
+    # Validate that all structured declarative properties were delegated correctly
     assert spy.called_kwargs["_subtests"] == "pytest-subtests-fixture-instance"
     assert spy.called_kwargs["_func"] is dummy_logic_gate
     assert spy.called_kwargs["exception_type"] is MockException

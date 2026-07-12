@@ -3,7 +3,7 @@ Tests for assert_class_constructor — verification of constructor field propaga
 """
 import pytest
 from typing import Any
-from simplibs.exception.testing.asserts.asserts_classes.assert_class_constructor import assert_class_constructor
+from simplibs.exception.testing.asserts.classes.assert_class_constructor import assert_class_constructor
 
 
 # -----------------------------------------------------------------------------

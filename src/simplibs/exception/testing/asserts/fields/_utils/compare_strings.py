@@ -1,6 +1,6 @@
 from typing import Any
 # Inners
-from .normalize_value import normalize_value
+from ._normalize_value import _normalize_value
 
 
 def compare_strings(
@@ -26,8 +26,8 @@ def compare_strings(
     """
 
     # Normalize inputs via the dedicated flattening utility
-    normalized_test = normalize_value(test_value)
-    normalized_exc = normalize_value(exc_value)
+    normalized_test = _normalize_value(test_value)
+    normalized_exc = _normalize_value(exc_value)
 
     # 1. Absolute Equality Mode (Highest Priority)
     if exact_match:
@@ -69,7 +69,7 @@ The evaluation passes if the expected string criteria is contained anywhere with
 the target exception readout (`assert test_value in exc_value`).
 
 ## Architectural Integration
-This engine utilizes `normalize_value` as a data-sanitization layer, ensuring that 
+This engine utilizes `_normalize_value` as a data-sanitization layer, ensuring that 
 all comparisons are performed against flattened, deterministic string buffers. This 
 abstraction allows the engine to remain agnostic to the underlying input types 
 (tuples, None, Unset tokens) while maintaining high-speed execution profiles.

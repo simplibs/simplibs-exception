@@ -2,7 +2,7 @@ from typing import Any
 from simplibs.sentinels import UnsetType
 
 
-def normalize_value(
+def _normalize_value(
     value: Any
 ) -> str:
     """Normalize input values into a consistent string format for comparison.
@@ -21,7 +21,7 @@ def normalize_value(
 
 
 _DESIGN_NOTES = """
-# normalize_value (Data Sanitization & Flattening Utility)
+# _normalize_value (Data Sanitization & Flattening Utility)
 
 ## Purpose
 Acts as the mandatory normalization gate for the `compare_strings` inspection engine. 
