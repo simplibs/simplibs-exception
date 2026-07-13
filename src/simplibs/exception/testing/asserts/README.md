@@ -52,7 +52,7 @@ Obsahuje:
 - `assert_function_callable`  
 - `assert_function_raises`  
 - `assert_function_valid_input`  
-- `_utils/manage_param`  
+- `_utils/process_params`  
 
 📄 **Více informací:**  
 → *viz* `asserts/functions/README.md`  

@@ -14,7 +14,7 @@ from simplibs.exception.testing.asserts.functions.assert_function_valid_input im
 
 
 # -----------------------------------------------------------------------------
-# 1. Valid Input Matrix
+# 1. Valid Input Matrix — Toggles and Non-Negative Depths
 # -----------------------------------------------------------------------------
 
 @pytest.mark.parametrize("valid_input", [
@@ -26,7 +26,7 @@ def test_validate_get_location_valid_input(subtests, valid_input):
     assert_function_valid_input(
         subtests,
         validate_get_location,
-        valid_param=valid_input,
+        valid_params=(valid_input,),  # Encapsulated into execution tuple
         verbose=False
     )
 
@@ -46,9 +46,10 @@ def test_validate_get_location_invalid_types(subtests, invalid_type):
     assert_exception_function(
         subtests,
         validate_get_location,
-        invalid_param=invalid_type,
+        invalid_params=(invalid_type,),  # Encapsulated into execution tuple
+        valid_params=(True,),            # Gold-standard verification of a compliant state
         exception_type=SimpleExceptionSettingsError,
-        value=invalid_type,
+        value=invalid_type,              # Pure un-wrapped value passed for exact attribute matching
         label="GET_LOCATION",
         expected="int or bool (e.g., True, False, 1, 2)",
         problem="value is neither a boolean nor an integer",
@@ -71,9 +72,10 @@ def test_validate_get_location_invalid_ranges(subtests, invalid_range):
     assert_exception_function(
         subtests,
         validate_get_location,
-        invalid_param=invalid_range,
+        invalid_params=(invalid_range,),  # Encapsulated into execution tuple
+        valid_params=(True,),             # Gold-standard verification of a compliant state
         exception_type=SimpleExceptionSettingsError,
-        value=invalid_range,
+        value=invalid_range,              # Pure un-wrapped value passed for exact attribute matching
         label="GET_LOCATION",
         expected="a non-negative integer (>= 0) or bool",
         problem="integer depth offset cannot be negative",

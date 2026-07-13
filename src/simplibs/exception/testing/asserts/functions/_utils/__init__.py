@@ -1,4 +1,4 @@
-from .manage_param import manage_param
+from .process_params import process_params
 
 _DESIGN_NOTES = """
 # Asserts Function Sub-Engine Utilities Registry
@@ -13,7 +13,7 @@ invocation signatures.
 
 | Component      | Type                   | Description                                             |
 | :------------- | :--------------------- | :------------------------------------------------------ |
-| `manage_param` | Signature Transformer  | Normalizes dynamic input payloads into `*args`/`**kwargs` components. |
+| `process_params` | Signature Transformer  | Normalizes dynamic input payloads into `*args`/`**kwargs` components. |
 
 ## Access Restriction
 These utilities are intended strictly for internal usage within `simplibs.exception.testing.asserts.function`. 

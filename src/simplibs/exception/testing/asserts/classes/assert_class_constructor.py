@@ -1,5 +1,7 @@
+import pytest
 from typing import Any
 # Outers
+from ...tools import maybe_subtest
 from ..fields import assert_exception_fields
 
 
@@ -14,7 +16,7 @@ def assert_class_constructor(
 
     Instantiates the exception class using the supplied constructor arguments and
     verifies that every provided value has been correctly propagated to the
-    resulting exception instance.
+    resulting exception instance. It also performs a basic string representation smoke check.
 
     Args:
         subtests: The native pytest subtests fixture manager instance.
@@ -23,7 +25,7 @@ def assert_class_constructor(
         intro: Optional prefix added to generated subtest names.
 
     Returns:
-        The instantiated and validated exception object.
+        The instantiated and validated dummy exception object.
     """
     subintro = "test_class_constructor::"
 
@@ -41,8 +43,8 @@ def assert_class_constructor(
     _skip_locations = ("<skip_locations>",)
     _oneline = True
 
-    # Pass the matrix directly into the class constructor gate
-    exc = exc_class(
+    # Pass the matrix directly into the class constructor gate (create a dummy test stub)
+    dummy_exc = exc_class(
         message=_message,
         value=_value,
         label=_label,
@@ -57,10 +59,10 @@ def assert_class_constructor(
         oneline=_oneline,
     )
 
-    # Validate that the instance layout perfectly mirrors the original reference data
+    # 1. Validate that the instance layout perfectly mirrors the original reference data
     assert_exception_fields(
         subtests,
-        exc,
+        dummy_exc,
         message=_message,
         value=_value,
         label=_label,
@@ -78,11 +80,37 @@ def assert_class_constructor(
         intro=intro + subintro,
     )
 
-    return exc
+    # 2. String Smoke Check: Verify core diagnostic identities leak into str() representation.
+    # We use resilient substring checks ('in') to avoid breaking when layout presentation or styles change.
+    exc_str = str(dummy_exc)
+
+    with maybe_subtest(
+        subtests,
+        name=f"{intro}{subintro}test_str_contains_error_name",
+        verbose=verbose,
+    ):
+        assert _error_name in exc_str, (
+            f"Constructor failed to propagate error_name into str().\n"
+            f"Expected substring: {_error_name!r}\n"
+            f"Actual string output: {exc_str!r}"
+        )
+
+    with maybe_subtest(
+        subtests,
+        name=f"{intro}{subintro}test_str_contains_message",
+        verbose=verbose,
+    ):
+        assert _message in exc_str, (
+            f"Constructor failed to propagate message into str().\n"
+            f"Expected substring: {_message!r}\n"
+            f"Actual string output: {exc_str!r}"
+        )
+
+    return dummy_exc
 
 
 _DESIGN_NOTES = """
-# assert_class_constructor (Constructor Propagation Audit)
+# assert_class_constructor (Constructor Propagation & String Smoke Audit)
 
 ## Purpose
 Validates the state initialization boundaries of custom exception classes. It explicitly ensures that 
@@ -92,11 +120,13 @@ framework-supported telemetry dataset to the active instance layout.
 ## Single Source of Truth Pattern
 To guarantee complete diagnostic safety and eliminate duplicate literal typing, this engine 
 implements a rigid internal variable matrix (prefixed with underscores, e.g., `_message`). 
+This matrix is mapped symmetrically across the inbound factory gate and the downstream evaluation gate.
 
-This matrix is mapped symmetrically across two distinct execution boundaries:
-1. **The Inbound Gate:** Fed into the custom exception factory constructor (`exc_class`).
-2. **The Evaluation Gate:** Fed into the downstream `assert_exception_fields` blade.
-
-This structural symmetry guarantees that any subtle mutation, data loss, or type truncation occurring 
-inside the custom error constructor is instantly exposed by the cross-boundary verification check.
+## Balanced String Evaluation (Smoke Testing vs. Layout Isolation)
+A string representation audit (`str(dummy_exc)`) is executed to ensure that core identities 
+are successfully exposed to the end-user. 
+To prevent tight coupling with the elastic layout rendering engine (which dynamically reshapes 
+output based on active presentation modes, tabs, or colors), the evaluation strictly utilizes 
+fuzzy substring checking (`in` operator) confined exclusively to `error_name` and `message`. 
+Exhaustive structural formatting tests are deliberately decoupled and isolated inside core framework layout suites.
 """

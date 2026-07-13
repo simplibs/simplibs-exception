@@ -44,13 +44,13 @@ def test_exception_function_full_pipeline():
     """Verify that all pipeline stages work with a custom exception implementing the interface."""
     spy = SubtestNoOpSpy()
 
-    # Orchestrator runs: callable -> valid_param -> invalid_param -> deep_check
+    # Orchestrator runs: callable -> valid_params -> invalid_params -> deep_check
     exc = assert_exception_function(
         spy,
         functional_target_custom,
         exception_type=CustomException,
-        invalid_param=("bad",),
-        valid_param=("valid",),
+        invalid_params=("bad",),
+        valid_params=("valid",),
         message="Invalid input detected",
         error_name="ERR_001",
         verbose=False
@@ -70,7 +70,7 @@ def test_exception_function_skip_deep_check():
         spy,
         functional_target_custom,
         exception_type=CustomException,
-        invalid_param=("bad",),
+        invalid_params=("bad",),
         message="This message is intentionally WRONG and will be ignored",
         deep_check=False,
         verbose=False
@@ -94,6 +94,6 @@ def test_exception_function_fails_on_wrong_exception_type():
             spy,
             functional_target_custom,
             exception_type=ValueError,  # Intentionally wrong type to trigger the guard
-            invalid_param=("bad",),
+            invalid_params=("bad",),
             verbose=False
         )

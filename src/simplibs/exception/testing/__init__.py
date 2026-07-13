@@ -1,9 +1,9 @@
 from .assert_exception_class import assert_exception_class
 from .assert_exception_function import assert_exception_function
 
-from .bulk_test import exceptions_bulk_test, FunctionCase
+from .bulk_test import exceptions_bulk_test, FuncCase
 
-from .tools import Kwargs, maybe_subtest, Param
+from .tools import Kwargs, maybe_subtest
 
 from .asserts import (
     assert_exception_fields,
@@ -23,12 +23,11 @@ __all__ = [
 
     # Bulk Testing
     "exceptions_bulk_test",
-    "FunctionCase",
+    "FuncCase",
 
     # Utility Components
     "Kwargs",
     "maybe_subtest",
-    "Param",
 
     # Low-Level Assertions
     "assert_exception_fields",
@@ -69,7 +68,7 @@ Components used for reusable scenarios and large validation matrices.
 | Component              | Description                                                              |
 | :--------------------- | :----------------------------------------------------------------------- |
 | `exceptions_bulk_test` | Executes heterogeneous collections of exception classes and function cases. |
-| `FunctionCase`         | Declarative container describing a reusable functional test scenario.      |
+| `FuncCase`         | Declarative container describing a reusable functional test scenario.      |
 
 
 ## Utility Components
@@ -80,7 +79,6 @@ Infrastructure helpers shared across the testing framework.
 | :-------------- | :----------------------------------------------------------------------- |
 | `Kwargs`        | Explicit wrapper for keyword arguments inside parameterized test inputs.  |
 | `maybe_subtest` | Context manager enabling optional pytest subtests with zero overhead.     |
-| `Param`         | Explicit isolation guard for protecting a single parameter collection.   |
 
 
 ## Low-Level Assertions

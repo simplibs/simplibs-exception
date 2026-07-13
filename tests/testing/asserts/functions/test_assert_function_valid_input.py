@@ -1,3 +1,6 @@
+"""
+Tests for assert_function_valid_input — validation of positive execution paths and signature routing.
+"""
 import pytest
 from simplibs.exception.testing.asserts.functions.assert_function_valid_input import assert_function_valid_input
 from simplibs.exception.testing.tools import Kwargs
@@ -18,6 +21,8 @@ def failing_function(*args, **kwargs):
 
 
 class SubtestNoOpSpy:
+    """Mock spy bypassing the native pytest-subtests overhead during core testing."""
+
     def test(self, name: str): return self
 
     def __enter__(self): return self
@@ -34,7 +39,7 @@ def test_valid_input_passes_with_correct_payload():
     spy = SubtestNoOpSpy()
 
     # Should not raise anything
-    assert_function_valid_input(spy, successful_function, valid_param=("arg1",), verbose=False)
+    assert_function_valid_input(spy, successful_function, valid_params=("arg1",), verbose=False)
 
 
 def test_valid_input_fails_when_function_raises_exception():
@@ -43,16 +48,16 @@ def test_valid_input_fails_when_function_raises_exception():
 
     # We expect an exception here because failing_function is hardcoded to raise RuntimeError
     with pytest.raises(RuntimeError):
-        assert_function_valid_input(spy, failing_function, valid_param=("arg1",), verbose=False)
+        assert_function_valid_input(spy, failing_function, valid_params=("arg1",), verbose=False)
 
 
-def test_valid_input_handles_kwargs_via_manage_param():
-    """Verify that complex parameter normalization works correctly."""
+def test_valid_input_handles_kwargs_via_process_params():
+    """Verify that complex parameter normalization works correctly using the core router."""
     spy = SubtestNoOpSpy()
 
     # Testing with a dummy function that checks if kwargs are passed
     def verify_kwargs(**kwargs):
         assert kwargs["key"] == "value"
 
-    # We rely on manage_param to handle the Kwargs object conversion
-    assert_function_valid_input(spy, verify_kwargs, valid_param=Kwargs(key="value"), verbose=False)
+    # We rely on process_params to handle the Kwargs object conversion
+    assert_function_valid_input(spy, verify_kwargs, valid_params=Kwargs(key="value"), verbose=False)

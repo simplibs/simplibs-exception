@@ -72,7 +72,7 @@ Validace funkční logiky:
 - callable gate,  
 - valid input,  
 - invalid input + typ výjimky,  
-- parametrická normalizace (`manage_param`).
+- parametrická normalizace (`process_params`).
 
 📄 **Více informací:**  
 → *viz* `asserts/functions/README.md`  
@@ -91,7 +91,7 @@ Automatizovaný orchestrátor pro testovací matice:
 Obsahuje:
 
 - `exceptions_bulk_test` — hlavní orchestrátor  
-- `FunctionCase` — deklarativní scénáře  
+- `FuncCase` — deklarativní scénáře  
 - `_utils` — introspekční pomocníci
 
 📄 **Více informací:**  

@@ -16,26 +16,22 @@ from simplibs.exception.testing import assert_exception_function
 # Invalid Input Matrix — Type Pollution & State Constraints
 # -----------------------------------------------------------------------------
 
-@pytest.mark.parametrize("invalid_cache_state", [
-    "bad-value",           # String primitive
-    123,                   # Numeric primitive
-    None,                  # Void object
-    [], (),                # Other structural containers
-    {"cached_key": str},   # Non-empty dict (CRITICAL: manual mutation attempt)
+@pytest.mark.parametrize("invalid_value", [
+    "bad-value",            # String primitive
+    123,                    # Numeric primitive
+    (),                     # Void object / empty tuple as parameter value
+    [],                     # List structural containers
+    {"cached_key": str},    # Non-empty dict (CRITICAL: manual mutation attempt)
 ])
-def test_validate_dynamic_cls_cache(subtests, invalid_cache_state):
-    """Verify that any non-empty dict or invalid data type triggers a protective state violation.
-
-    NOTE: An empty dictionary `{}` represents the only single permissible state for manual resets
-          and is explicitly verified via the `valid_param` interceptor.
-    """
+def test_validate_dynamic_cls_cache(subtests, invalid_value):
+    """Verify that any non-empty dict or invalid data type triggers a protective state violation."""
     assert_exception_function(
         subtests,
         validate_dynamic_cls_cache,
-        invalid_param=invalid_cache_state,
-        valid_param={},  # Gold-standard verification of the only valid input state
+        invalid_params=(invalid_value,),
+        valid_params=({},),
         exception_type=SimpleExceptionSettingsError,
-        value=invalid_cache_state,
+        value=invalid_value,
         label="_dynamic_cls_cache",
         expected="an empty dict {} — for configuration and state reset routines only",
         problem="the multi-inheritance class cache is handled internally and cannot be manually overwritten",

@@ -14,7 +14,7 @@ from simplibs.exception.testing.asserts.functions.assert_function_valid_input im
 
 
 # -----------------------------------------------------------------------------
-# 1. Valid Input Matrix
+# 1. Valid Input Matrix — Positive Lengths
 # -----------------------------------------------------------------------------
 
 @pytest.mark.parametrize("valid_length", [1, 50, 100, 1000])
@@ -23,7 +23,7 @@ def test_validate_value_truncation_length_valid_inputs(subtests, valid_length):
     assert_function_valid_input(
         subtests,
         validate_value_truncation_length,
-        valid_param=valid_length,
+        valid_params=(valid_length,),  # Safe encapsulation into the execution tuple
         verbose=False
     )
 
@@ -43,9 +43,10 @@ def test_validate_value_truncation_length_invalid_types(subtests, invalid_type):
     assert_exception_function(
         subtests,
         validate_value_truncation_length,
-        invalid_param=invalid_type,
+        invalid_params=(invalid_type,),  # Encapsulated on-the-fly into execution tuple
+        valid_params=(100,),             # Gold-standard verification using a valid integer length
         exception_type=SimpleExceptionSettingsError,
-        value=invalid_type,
+        value=invalid_type,              # Pure un-wrapped payload passed for exact attribute matching
         label="VALUE_TRUNCATION_LENGTH",
         expected="a positive integer (e.g., 50, 100, 200)",
         problem="value is not an integer",
@@ -66,9 +67,10 @@ def test_validate_value_truncation_length_invalid_ranges(subtests, invalid_range
     assert_exception_function(
         subtests,
         validate_value_truncation_length,
-        invalid_param=invalid_range,
+        invalid_params=(invalid_range,),  # Encapsulated on-the-fly into execution tuple
+        valid_params=(100,),              # Gold-standard verification using a valid integer length
         exception_type=SimpleExceptionSettingsError,
-        value=invalid_range,
+        value=invalid_range,              # Pure un-wrapped payload passed for exact attribute matching
         label="VALUE_TRUNCATION_LENGTH",
         expected="a positive integer greater than 0",
         problem="value is zero or negative",

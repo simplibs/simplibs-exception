@@ -1,17 +1,21 @@
+"""
+Assertion utility for validating negative functional execution boundaries.
+"""
 from typing import Any, Callable
 import pytest
 from simplibs.sentinels import UNSET, UnsetType
+
 # Outers
-from ...tools import maybe_subtest
+from ...tools import maybe_subtest, Kwargs
 # Inners
-from ._utils import manage_param
+from ._utils import process_params
 
 
 def assert_function_raises(
     subtests: Any,
     func: Callable[..., Any],
     *,
-    invalid_param: Any,
+    invalid_params: tuple[Any, ...] | Kwargs,
     exception_type: (
         type[BaseException]
         | tuple[type[BaseException], ...]
@@ -29,7 +33,8 @@ def assert_function_raises(
     Args:
         subtests: The native pytest subtests fixture manager instance.
         func: The target function or callable under test.
-        invalid_param: The raw parameter payload designed to trigger an execution failure.
+        invalid_params: The explicit parameter payload (tuple or Kwargs) designed
+            To trigger an execution failure.
         exception_type: Expected exception class or a tuple of valid exception classes.
             If UNSET, any exception deriving from BaseException satisfies the check.
         verbose: Enables isolated pytest subtest logging layout tracking.
@@ -39,7 +44,7 @@ def assert_function_raises(
         The caught exception instance for downstream field inspection.
     """
     # Extract standard execution components (*args, **kwargs) from the input wrapper
-    args, kwargs = manage_param(invalid_param)
+    args, kwargs = process_params(invalid_params)
 
     # 1. Verify that the function boundary execution successfully forces an exception drop
     with maybe_subtest(
@@ -69,8 +74,9 @@ def assert_function_raises(
                 f"\n[Framework Guard] Target function raised an unexpected exception type!\n"
                 f"Expected: {expected_names}\n"
                 f"Actual:   {type(exc).__name__} ({exc})\n\n"
-                f"💡 Tip: If you received a TypeError about positional arguments, "
-                f"you probably forgot to wrap your collection parameter into a 'Param()' guard."
+                f"💡 Tip: If you received an unexpected TypeError or failure, verify your signatures. "
+                f"Remember that all operational payloads must be strictly wrapped inside a tuple: "
+                f"invalid_params=(value,) or Kwargs instance."
             )
 
         # Re-verify within the subtest context for standard report logging
@@ -93,16 +99,17 @@ An automated validation utility for negative functional constraints. It wraps pa
 guaranteed exception interception, and strict type verification into a clean, reusable interface.
 
 ## Execution Sequencing & Exception Capture
-1. **Parameter Unpacking Layer:** Leverages `manage_param` to seamlessly transform scalar values, 
-   sequences, or explicit `Kwargs` allocations into runtime `*args` and `**kwargs`.
+1. **Parameter Unpacking Layer:** Leverages `process_params` to seamlessly transform explicit argument 
+   tuples or standalone `Kwargs` configurations into strict runtime `*args` and `**kwargs`.
 2. **Interception Guard (`pytest.raises`):** Forces the core execution block inside a master 
    Python `BaseException` net. Because this guard is nested directly inside the bi-modal 
    `maybe_subtest` engine, it handles failure state analysis consistently across both verbose and fast-pass CI lanes.
 3. **Framework Guard & Type Blueprint Matching:** Extracts the underlying instance (`exc_info.value`) 
-   and performs a pre-flight lineage validation. If the caught error diverges from `exception_type`, 
-   the engine actively aborts execution using `pytest.fail`. This hard stop prevents cascading, 
-   unreadable `AttributeError` exceptions from running inside subsequent field-telemetry blocks 
-   when a function unexpectedly throws standard runtime signature errors (e.g., `TypeError`).
+   An performs a pre-flight lineage validation. If the caught error diverges from `exception_type`, 
+   The engine actively aborts execution using `pytest.fail`. This hard stop prevents cascading, 
+   Unreadable `AttributeError` exceptions from running inside subsequent field-telemetry blocks 
+   When a function unexpectedly throws standard runtime signature errors (e.g., a native `TypeError` 
+   Due to parameter mismatch).
 
 ## Downstream Fluid Interface Design
 By returning the raw caught `BaseException` instance, this function acts as an ideal conduit for 

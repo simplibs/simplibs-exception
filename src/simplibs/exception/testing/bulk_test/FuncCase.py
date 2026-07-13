@@ -1,12 +1,17 @@
+"""
+Declarative container representing an isolated functional test case scenario.
+"""
 from dataclasses import dataclass
 from typing import Any, Callable
 from simplibs.sentinels import UNSET, UnsetType
+
 # Outers
 from ..assert_exception_function import assert_exception_function
+from ..tools import Kwargs
 
 
 @dataclass(slots=True, kw_only=True)
-class FunctionCase:
+class FuncCase:
     """A declarative, reusable container representing an isolated functional test scenario.
 
     Captures and stores the entire static expectation blueprint required to validate
@@ -15,8 +20,8 @@ class FunctionCase:
 
     Attributes:
         func: The target callable validation or logic function under test.
-        valid_param: An optional parameter payload expected to pass without error.
-        invalid_param: The parameter payload expected to trigger the exception.
+        valid_params: An optional explicit parameter payload (tuple or Kwargs) expected to pass.
+        invalid_params: The explicit parameter payload (tuple or Kwargs) expected to trigger the exception.
         exception_type: The expected exception class type blueprint.
         error_name: Expected internal system error identity code.
         label: Expected human-readable categorization title.
@@ -35,8 +40,8 @@ class FunctionCase:
     func: Callable[..., Any]
     exception_type: type[BaseException]
 
-    valid_param: Any = UNSET
-    invalid_param: Any = UNSET
+    invalid_params: tuple[Any, ...] | Kwargs
+    valid_params: tuple[Any, ...] | Kwargs | UnsetType = UNSET
 
     error_name: str | UnsetType = UNSET
     label: str | None | UnsetType = UNSET
@@ -80,8 +85,8 @@ class FunctionCase:
         return assert_exception_function(
             subtests,
             self.func,
-            valid_param=self.valid_param,
-            invalid_param=self.invalid_param,
+            valid_params=self.valid_params,
+            invalid_params=self.invalid_params,
             exception_type=self.exception_type,
             error_name=self.error_name,
             label=self.label,
@@ -104,10 +109,10 @@ class FunctionCase:
 
 
 _DESIGN_NOTES = """
-# FunctionCase (Declarative Functional Test Scenario Blueprint)
+# FuncCase (Declarative Functional Test Scenario Blueprint)
 
 ## Architectural Purpose
-`FunctionCase` acts as a specialized data schema wrapper for functional boundary testing, 
+`FuncCase` acts as a specialized data schema wrapper for functional boundary testing, 
 pairing an anonymous executable routine (`func`) with a comprehensive block of concrete 
 diagnostic expectations.
 
@@ -118,12 +123,12 @@ audit for dynamic error messages. Stricter validation modes require explicit opt
 - **`startswith=True`**: Prefix validation.
 
 ## Tactical Domain Selection
-- **Exception Classes:** Do **not** use `FunctionCase`. 
-- **Functions & Logic Gates:** Natively wrapped via `FunctionCase` whenever deep telemetry 
+- **Exception Classes:** Do **not** use `FuncCase`. 
+- **Functions & Logic Gates:** Natively wrapped via `FuncCase` whenever deep telemetry 
   property validation is required.
 
 ## Matrix Orchestration Compatibility
-`FunctionCase` serves as a premium object format within `generate_bulk_tests`. This allows 
+`FuncCase` serves as a premium object format within `generate_bulk_tests`. This allows 
 developers to construct visual and readable test batteries where structural class audits 
 and intricate multi-point logic verifications sit side-by-side inside a single master 
 collection layout.

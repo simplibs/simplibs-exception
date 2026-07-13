@@ -21,8 +21,8 @@ def test_validate_dynamic_cls_cache(subtests):
     assert_exception_function(
         subtests,
         validate_dynamic_cls_cache,
-        valid_param={},
-        invalid_param="abc",
+        valid_params={},
+        invalid_params="abc",
         exception_type=SimpleExceptionSettingsError,
         error_name="SETTINGS ERROR",
         label="_dynamic_cls_cache",

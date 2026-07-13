@@ -32,8 +32,8 @@ class DummyClass:
 VALIDATE_DYNAMIC_CLS_CACHE_CASE = TestCase(
     func=validate_dynamic_cls_cache,
 
-    valid_param={},
-    invalid_param="abc",
+    valid_params={},
+    invalid_params="abc",
 
     exception_type=SimpleExceptionSettingsError,
 

@@ -1,5 +1,5 @@
 """
-Tests for assert_class_constructor — verification of constructor field propagation matrix.
+Tests for assert_class_constructor — verification of constructor field propagation matrix and str() smoke paths.
 """
 import pytest
 from typing import Any
@@ -11,12 +11,16 @@ from simplibs.exception.testing.asserts.classes.assert_class_constructor import 
 # -----------------------------------------------------------------------------
 
 class CompliantExceptionMock(Exception):
-    """A perfectly implemented exception class that stores all constructor inputs."""
+    """A perfectly implemented exception class that stores all constructor inputs and satisfies str()."""
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__()
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+    def __str__(self) -> str:
+        # Guarantee that the core diagnostic identities leak into the string output
+        return f"⚠️ {getattr(self, 'error_name', '')} | Message: {getattr(self, 'message', '')}"
 
 
 class BrokenExceptionMock(Exception):
@@ -28,6 +32,9 @@ class BrokenExceptionMock(Exception):
             setattr(self, key, value)
         # Structural Malfunction Simulation: Sabotage the label attribute
         self.label = "corrupted-value"
+
+    def __str__(self) -> str:
+        return f"⚠️ {getattr(self, 'error_name', '')} | Message: {getattr(self, 'message', '')}"
 
 
 class SubtestNoOpSpy:

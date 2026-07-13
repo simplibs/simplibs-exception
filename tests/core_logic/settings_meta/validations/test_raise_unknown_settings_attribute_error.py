@@ -25,7 +25,7 @@ def test_raise_unknown_settings_attribute_error(subtests):
     assert_exception_function(
         subtests,
         raise_unknown_settings_attribute_error,
-        invalid_param=(SettingsMeta, "bad-value"),
+        invalid_params=(SettingsMeta, "bad-value"),
         exception_type=SimpleExceptionSettingsError,
         value="bad-value",
         label="SimpleExceptionSettings",

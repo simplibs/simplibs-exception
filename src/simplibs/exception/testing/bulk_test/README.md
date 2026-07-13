@@ -4,7 +4,7 @@ Balíček `bulk_test` poskytuje **automatizovaný orchestrátor**, který umož�
 
 - výjimkami,  
 - funkcemi vyvolávajícími výjimky,  
-- komplexními scénáři popsanými pomocí `FunctionCase`.
+- komplexními scénáři popsanými pomocí `FuncCase`.
 
 Je to nejvyšší vrstva testovacího frameworku SimpleException — umožňuje psát **jediný test**, který pokryje celou architekturu.
 
@@ -15,7 +15,7 @@ Je to nejvyšší vrstva testovacího frameworku SimpleException — umožňuje 
 ### 📁 `bulk_test/exceptions_bulk_test.py`
 Hlavní orchestrátor, který umí automaticky rozpoznat tři typy položek:
 
-- **FunctionCase** → komplexní funkční scénář  
+- **FuncCase** → komplexní funkční scénář  
 - **exception class** → struktura výjimky  
 - **tuple (exc_class, func, *params)** → inline funkční test  
 
@@ -27,7 +27,7 @@ Každý typ je automaticky směrován do správného validačního modulu.
 
 ---
 
-### 📁 `bulk_test/FunctionCase.py`
+### 📁 `bulk_test/FuncCase.py`
 Deklarativní datová třída, která popisuje **kompletní funkční testovací scénář**:
 
 - cílová funkce,  
@@ -40,7 +40,7 @@ Slouží jako stavební blok pro `exceptions_bulk_test`.
 
 📄 **Více informací:**  
 → *viz vnitřní dokumentace v souboru*  
-**FunctionCase**
+**FuncCase**
 
 ---
 
@@ -76,9 +76,9 @@ exceptions_bulk_test(
     items=[
         MyException,
         (MyException, validate_input, "bad"),
-        FunctionCase(
+        FuncCase(
             func=validate_input,
-            invalid_param=("bad",),
+            invalid_params=("bad",),
             exception_type=MyException,
             message="Invalid input",
         )
@@ -95,7 +95,7 @@ exceptions_bulk_test(
   Každá položka je automaticky rozpoznána a zpracována správným modulem.
 
 - **Modularita**  
-  Funkční scénáře (`FunctionCase`) a výjimkové scénáře jsou oddělené.
+  Funkční scénáře (`FuncCase`) a výjimkové scénáře jsou oddělené.
 
 - **Determinismus**  
   Pipeline má pevně definované pořadí kroků.

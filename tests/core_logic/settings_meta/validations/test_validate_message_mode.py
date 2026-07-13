@@ -25,13 +25,13 @@ class CustomJsonFormattingMode(ModeBase):
 
 
 # -----------------------------------------------------------------------------
-# 1. Valid Input Matrix
+# 1. Valid Input Matrix — Built-in Singletons & Extensions
 # -----------------------------------------------------------------------------
 
 @pytest.mark.parametrize("valid_mode", [
-    PRETTY, 
-    SIMPLE, 
-    LOG, 
+    PRETTY,
+    SIMPLE,
+    LOG,
     CustomJsonFormattingMode()
 ])
 def test_validate_message_mode_valid_inputs(subtests, valid_mode):
@@ -39,13 +39,13 @@ def test_validate_message_mode_valid_inputs(subtests, valid_mode):
     assert_function_valid_input(
         subtests,
         validate_message_mode,
-        valid_param=valid_mode,
+        valid_params=(valid_mode,),  # Safe encapsulation into the execution tuple
         verbose=False
     )
 
 
 # -----------------------------------------------------------------------------
-# 2. Invalid Input Matrix
+# 2. Invalid Input Matrix — Type & Structure Violations
 # -----------------------------------------------------------------------------
 
 @pytest.mark.parametrize("invalid_mode", [
@@ -58,9 +58,10 @@ def test_validate_message_mode_invalid_inputs(subtests, invalid_mode):
     assert_exception_function(
         subtests,
         validate_message_mode,
-        invalid_param=invalid_mode,
+        invalid_params=(invalid_mode,),  # Encapsulated on-the-fly into execution tuple
+        valid_params=(SIMPLE,),           # Gold-standard verification using a valid built-in singleton
         exception_type=SimpleExceptionSettingsError,
-        value=invalid_mode,
+        value=invalid_mode,               # Pure un-wrapped payload passed for exact attribute matching
         label="MESSAGE_MODE",
         expected="an instance of a class derived from ModeBase (e.g., PRETTY, SIMPLE, ONELINE, LOG)",
         problem="value is not a valid framework output mode configuration",

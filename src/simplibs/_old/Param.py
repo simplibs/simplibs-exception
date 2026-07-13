@@ -7,7 +7,7 @@ class Param:
     """Explicit semantic wrapper isolating a single parameter payload.
 
     Prevents unexpected collection unpacking inside the parameter normalization
-    pipeline (`manage_param`). Enforces that the encapsulated value—regardless of
+    pipeline (`process_params`). Enforces that the encapsulated value—regardless of
     whether it is a tuple, list, or set—is treated strictly as a singular,
     indivisible positional argument.
 
@@ -38,7 +38,7 @@ _DESIGN_NOTES = """
 
 ## Purpose
 An architectural token wrapper designed to protect complex collections from accidental signature 
-unpacking across automated test runners. It signals the parameter evaluation lifecycle (`manage_param`) 
+unpacking across automated test runners. It signals the parameter evaluation lifecycle (`process_params`) 
 that its contents represent a single, atomic positional argument, resolving the implicit ambiguity 
 of native Python sequences (`tuple` / `list`) within dynamic matrix routers.
 

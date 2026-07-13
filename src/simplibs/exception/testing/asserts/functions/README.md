@@ -45,7 +45,7 @@ Podporuje:
 - tuple/list,  
 - trailing `Kwargs`,  
 - raw dict (jako positional payload),  
-- vše díky `manage_param`.
+- vše díky `process_params`.
 
 ---
 
@@ -57,15 +57,15 @@ Tento assert ověřuje:
 - že funkce není „permanentně rozbitá“,  
 - že lze bezpečně pokračovat na negativní testy.
 
-Opět využívá `manage_param` pro jednotné zpracování parametrů.
+Opět využívá `process_params` pro jednotné zpracování parametrů.
 
 ---
 
-## 🧰 `_utils/manage_param` — Parametrický normalizační engine
+## 🧰 `_utils/process_params` — Parametrický normalizační engine
 
 Tento modul obsahuje jedinou, ale zásadní funkci:
 
-### `manage_param(param)`
+### `process_params(param)`
 Normalizuje libovolný vstup do:
 
 ```python
@@ -96,7 +96,7 @@ Validuje negativní scénáře — funkce musí vyvolat výjimku.
 ### `assert_function_valid_input.py`
 Validuje pozitivní scénáře — funkce nesmí vyvolat výjimku.
 
-### `_utils/manage_param.py`
+### `_utils/process_params.py`
 Normalizuje parametry do `(args, kwargs)`.
 
 ### `__init__.py`
@@ -116,7 +116,7 @@ assert_function_callable(subtests, my_func)
 assert_function_raises(
     subtests,
     my_func,
-    invalid_param=("bad",),
+    invalid_params=("bad",),
     exception_type=ValueError,
 )
 ```
@@ -126,7 +126,7 @@ assert_function_raises(
 assert_function_valid_input(
     subtests,
     my_func,
-    valid_param=("good",),
+    valid_params=("good",),
 )
 ```
 
@@ -137,7 +137,7 @@ from simplibs.exception.testing.tools import Kwargs
 assert_function_valid_input(
     subtests,
     my_func,
-    valid_param=Kwargs(mode="safe"),
+    valid_params=Kwargs(mode="safe"),
 )
 ```
 
@@ -149,7 +149,7 @@ assert_function_valid_input(
   Pokud objekt není callable → pipeline se zastaví.
 
 - **Deterministická normalizace parametrů**  
-  `manage_param` zajišťuje jednotné chování.
+  `process_params` zajišťuje jednotné chování.
 
 - **Oddělení pozitivních a negativních scénářů**  
   Každý assert řeší jednu oblast.

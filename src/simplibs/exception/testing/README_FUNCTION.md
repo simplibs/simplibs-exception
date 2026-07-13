@@ -49,7 +49,7 @@ Ověří, že objekt je skutečně callable.
 
 ---
 
-### 2) **Valid Input Sanity Check** *(pokud je `valid_param` zadán)*
+### 2) **Valid Input Sanity Check** *(pokud je `valid_params` zadán)*
 ```python
 assert_function_valid_input(...)
 ```
@@ -127,8 +127,8 @@ assert_exception_function(
     subtests,
     my_func,
     exception_type=MyError,
-    invalid_param=("bad",),
-    valid_param=("good",),
+    invalid_params=("bad",),
+    valid_params=("good",),
     message="Something went wrong",
     error_name="MY_ERR",
 )
@@ -140,7 +140,7 @@ assert_exception_function(
     subtests,
     my_func,
     exception_type=MyError,
-    invalid_param=("bad",),
+    invalid_params=("bad",),
     message="Invalid",
     startswith=True,
 )
@@ -152,7 +152,7 @@ assert_exception_function(
     subtests,
     my_func,
     exception_type=MyError,
-    invalid_param=("bad",),
+    invalid_params=("bad",),
     verbose=False,
 )
 ```
@@ -163,7 +163,7 @@ assert_exception_function(
     subtests,
     my_func,
     exception_type=MyError,
-    invalid_param=("bad",),
+    invalid_params=("bad",),
     deep_check=False,
 )
 ```

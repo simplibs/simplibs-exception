@@ -1,6 +1,6 @@
 import pytest
 from simplibs.exception.testing.bulk_test.exceptions_bulk_test import exceptions_bulk_test
-from simplibs.exception.testing.bulk_test.FunctionCase import FunctionCase
+from simplibs.exception.testing.bulk_test.FuncCase import FuncCase
 from simplibs.exception import SimpleExceptionData
 
 
@@ -44,10 +44,10 @@ def test_bulk_test_orchestrator_routing():
         # 2. Functional invocation (Routing 3)
         (SimpleException, trigger_error, "bad"),
 
-        # 3. Encapsulated FunctionCase (Routing 1)
-        FunctionCase(
+        # 3. Encapsulated FuncCase (Routing 1)
+        FuncCase(
             func=trigger_error,
-            invalid_param=("bad",),
+            invalid_params=("bad",),
             exception_type=SimpleException
         )
     ]

@@ -14,8 +14,8 @@ class Kwargs(Mapping[str, Any]):
     than evaluated as standard single positional mapping objects.
 
     Example:
-        invalid_param = Kwargs(strict=True, timeout=10)
-        invalid_param = (42, Kwargs({"mode": "debug"}))
+        invalid_params = Kwargs(strict=True, timeout=10)
+        invalid_params = (42, Kwargs({"mode": "debug"}))
     """
 
     _values: dict[str, Any]
@@ -62,7 +62,7 @@ _DESIGN_NOTES = """
 
 ## Purpose
 An architectural token wrapper designed to bypass type ambiguity across automated test runners. 
-It explicitly informs parameter evaluation pipelines (`manage_param`) that the encapsulated 
+It explicitly informs parameter evaluation pipelines (`process_params`) that the encapsulated 
 mapping structure must be expanded into named keyword arguments (`**kwargs`), resolving the 
 structural collision where a raw dictionary is intended as a literal positional parameter.
 

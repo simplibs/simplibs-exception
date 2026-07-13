@@ -1,10 +1,10 @@
 from typing import Any
 # Inners
-from ....tools import Kwargs, Param
+from ....tools import Kwargs, Params
 
 
 
-def manage_param(
+def process_param(
     param: Any
 ) -> tuple[tuple[Any, ...], dict[str, Any]]:
     """Normalize a raw dynamic test parameter into standard execution arguments.
@@ -12,33 +12,15 @@ def manage_param(
     Unpacks the provided parameter block into a structured `(args, kwargs)` tuple
     suitable for clean programmatical function invocation (`func(*args, **kwargs)`).
     """
-    args: tuple[Any, ...] = ()
-    kwargs: dict[str, Any] = {}
 
-    # Scenario 1: Standalone keyword arguments token wrapper
-    if isinstance(param, Kwargs):
-        kwargs = dict(param)
-
-    # Scenario 2: Sequence router handling multi-argument positional execution rows
-    elif isinstance(param, (tuple, list)):
-        if param:
-            if isinstance(param[-1], Kwargs):
-                args = tuple(param[:-1])
-                # noinspection PyTypeChecker
-                kwargs = dict(param[-1])
-            else:
-                args = tuple(param)
-        else:
-            args = (param,)
-
-        # Deep-Scan Clean: Unwrap any encapsulated atomic Param guards discovered inside the sequence
-        args = tuple(i.value if isinstance(i, Param) else i for i in args)
+    # Scenario 1: Sequence router handling multi-argument positional execution rows
+    if isinstance(param, (Params, Kwargs)):
+        return param.args_and_kwargs
 
     # Scenario 3: Standard atomic scalar payload or a standalone Param guard fallback
     else:
-        args = (param.value,) if isinstance(param, Param) else (param,)
+        return (param,), {}
 
-    return args, kwargs
 
 
 _DESIGN_NOTES = """

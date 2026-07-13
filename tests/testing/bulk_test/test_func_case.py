@@ -1,11 +1,11 @@
 """
-Tests for TestCase — declarative scenario storage and execution proxy routing.
+Tests for FuncCase — declarative scenario storage and execution proxy routing.
 """
 import pytest
 import sys
 from typing import Any
 from simplibs.sentinels import UNSET
-from simplibs.exception.testing.bulk_test.FunctionCase import FunctionCase
+from simplibs.exception.testing.bulk_test.FuncCase import FuncCase
 
 
 # -----------------------------------------------------------------------------
@@ -40,14 +40,15 @@ class AssertFunctionSpy:
 # Unit Tests
 # -----------------------------------------------------------------------------
 
-def test_function_case_stores_and_decouples_static_expectation_blueprint():
+def test_func_case_stores_and_decouples_static_expectation_blueprint():
     """Verify that the dataclass correctly mounts all declarative attributes and defaults."""
-    case = FunctionCase(
+    case = FuncCase(
         func=dummy_logic_gate,
         exception_type=MockException,
         label="io-subsystem",
         error_name="STORAGE_ERROR",
-        valid_param={"mode": "safe"}
+        valid_params=({"mode": "safe"},),
+        invalid_params=()
     )
 
     # Core required fields
@@ -57,10 +58,10 @@ def test_function_case_stores_and_decouples_static_expectation_blueprint():
     # Manually assigned metadata fields
     assert case.label == "io-subsystem"
     assert case.error_name == "STORAGE_ERROR"
-    assert case.valid_param == {"mode": "safe"}
+    assert case.valid_params == ({"mode": "safe"},)
+    assert case.invalid_params == ()
 
     # Default sentinel fields must remain UNSET
-    assert case.invalid_param is UNSET
     assert case.message is UNSET
     assert case.problem is UNSET
     assert case.how_to_fix is UNSET
@@ -74,9 +75,9 @@ def test_run_test_proxies_entire_payload_down_to_assertion_engine(monkeypatch):
     # Namespace Interception (Monkeypatch Setup)
     # -------------------------------------------------------------------------
     # Resolve the underlying module object dynamically via sys.modules.
-    # This bypasses namespace collisions where the local 'FunctionCase' identifier
+    # This bypasses namespace collisions where the local 'FuncCase' identifier
     # refers to the dataclass type rather than the raw module container.
-    module = sys.modules[FunctionCase.__module__]
+    module = sys.modules[FuncCase.__module__]
 
     # Intercept the localized assertion function inside the target module
     monkeypatch.setattr(
@@ -88,9 +89,10 @@ def test_run_test_proxies_entire_payload_down_to_assertion_engine(monkeypatch):
     # -------------------------------------------------------------------------
     # Scenario Configuration & Execution
     # -------------------------------------------------------------------------
-    case = FunctionCase(
+    case = FuncCase(
         func=dummy_logic_gate,
         exception_type=MockException,
+        invalid_params=(123,),
         label="network-layer",
         error_name="TIMEOUT",
         expected="active connection",
@@ -118,6 +120,7 @@ def test_run_test_proxies_entire_payload_down_to_assertion_engine(monkeypatch):
     assert spy.called_kwargs["_subtests"] == "pytest-subtests-fixture-instance"
     assert spy.called_kwargs["_func"] is dummy_logic_gate
     assert spy.called_kwargs["exception_type"] is MockException
+    assert spy.called_kwargs["invalid_params"] == (123,)
     assert spy.called_kwargs["label"] == "network-layer"
     assert spy.called_kwargs["error_name"] == "TIMEOUT"
     assert spy.called_kwargs["expected"] == "active connection"

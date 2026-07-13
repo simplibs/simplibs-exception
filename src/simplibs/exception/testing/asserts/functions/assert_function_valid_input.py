@@ -1,15 +1,15 @@
 from typing import Any, Callable
 # Outers
-from ...tools import maybe_subtest
+from ...tools import maybe_subtest, Kwargs
 # Inners
-from ._utils import manage_param
+from ._utils import process_params
 
 
 def assert_function_valid_input(
     subtests: Any,
     func: Callable[..., Any],
     *,
-    valid_param: Any,
+    valid_params: tuple[Any, ...] | Kwargs,
     verbose: bool = True,
     intro: str = "",
 ) -> None:
@@ -22,14 +22,13 @@ def assert_function_valid_input(
     Args:
         subtests: The native pytest subtests fixture manager instance.
         func: The target function or validation callable under test.
-        valid_param: The raw parameter payload designed to represent a correct,
-            successful operational state.
+        valid_params: The explicit parameter payload (tuple or Kwargs) designed
+            to represent a correct, successful operational state.
         verbose: Enables isolated pytest subtest logging layout tracking.
         intro: Optional prefix string added to the generated subtest identity name.
     """
-
     # Normalize input variation data into strict execution components (*args, **kwargs)
-    args, kwargs = manage_param(valid_param)
+    args, kwargs = process_params(valid_params)
 
     # Verify that the execution pipeline completes natively without any side-effect drops
     with maybe_subtest(
@@ -49,8 +48,8 @@ stability. It ensures that a function operates as expected under clean, standard
 guaranteeing zero regression anomalies for valid execution schemas.
 
 ## Parametric Unpacking & Invocation Protection
-By leveraging the centralized `manage_param` utility, this engine cleanly processes primitives, 
-data sequences, or explicit named parameters (`Kwargs`) natively. The unpack-and-invoke line 
+By leveraging the centralized `process_params` utility, this engine cleanly processes explicit 
+argument tuples or standalone named parameter (`Kwargs`) configurations. The unpack-and-invoke line 
 `func(*args, **kwargs)` runs directly inside the bi-modal `maybe_subtest` gate. 
 
 If any unexpected exception is triggered from deep within the execution tree of `func`, pytest immediately 

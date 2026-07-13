@@ -10,7 +10,6 @@ from simplibs.exception._core_logic.settings_meta.validations.raise_system_black
     raise_system_blacklist_mutation_error,
 )
 from simplibs.exception.testing import assert_exception_function
-from simplibs.exception.testing.tools.Param import Param
 
 
 # -----------------------------------------------------------------------------
@@ -22,7 +21,7 @@ def test_raise_system_blacklist_mutation_error(subtests):
     assert_exception_function(
         subtests,
         raise_system_blacklist_mutation_error,
-        invalid_param=("bad-value",),
+        invalid_params=("bad-value",),
         exception_type=SimpleExceptionSettingsError,
         value="bad-value",
         label="SimpleExceptionSettings",

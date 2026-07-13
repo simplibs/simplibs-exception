@@ -5,7 +5,7 @@ from ..assert_exception_class import assert_exception_class
 from ..assert_exception_function import assert_exception_function
 from ..tools import maybe_subtest
 # Inners
-from .FunctionCase import FunctionCase
+from .FuncCase import FuncCase
 from ._utils import is_exception_class, is_exception_function
 
 
@@ -39,8 +39,8 @@ def exceptions_bulk_test(
 
     for item in items:
 
-        # 1. Process explicit composite testing contexts encapsulated as FunctionCase objects
-        if isinstance(item, FunctionCase):
+        # 1. Process explicit composite testing contexts encapsulated as FuncCase objects
+        if isinstance(item, FuncCase):
             intro = f"test_{item.func.__name__}::"
 
             item.run_test(
@@ -77,7 +77,7 @@ def exceptions_bulk_test(
             assert_exception_function(
                 subtests,
                 func,
-                invalid_param=raw_params,
+                invalid_params=raw_params,
                 exception_type=exc_class,
                 exact_match=exact_match,
                 startswith=startswith,
