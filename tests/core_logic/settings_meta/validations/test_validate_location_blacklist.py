@@ -28,7 +28,7 @@ def test_validate_location_blacklist_valid_input(subtests, valid_input):
         subtests,
         validate_location_blacklist,
         valid_params=(valid_input,),  # Safe encapsulation into the execution tuple
-        verbose=False
+        verbose=True
     )
 
 

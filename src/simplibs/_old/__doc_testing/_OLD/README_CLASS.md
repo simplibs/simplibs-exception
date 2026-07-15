@@ -1,14 +1,22 @@
-# 📦 `assert_exception_class` — Composite Exception Class Auditor
+# 📦 `assert_exception_class` 
+**Composite Exception Class Auditor**
 
-`assert_exception_class` je **hlavní orchestrátor** celé testovací infrastruktury pro výjimky v knihovně **SimpleException**.  
-Je to jediný vstupní bod, který provádí kompletní audit výjimky:
+`assert_exception_class` je hlavní orchestrátor (vzorec **Facade**) testovací infrastruktury pro výjimky v knihovně `SimpleException`. Sjednocuje čtyři dílčí kontroly do jedné sekvenční pipeline.
 
-- dědičnost,  
-- defaulty,  
-- konstruktor,  
-- public API.
+## 🧭 Pipeline kroků
 
-Tento modul implementuje **Facade Pattern** — sjednocuje čtyři dílčí asserts do jedné konzistentní pipeline.
+Orchestrátor provádí kroky v tomto přesném pořadí:
+
+1. **Inheritance Contract** (`assert_class_inheritance`)  
+   Ověří, že výjimka dědí `BaseException` a `SimpleExceptionData`.
+2. **Class Defaults Reflection** (`assert_class_defaults`)  
+   Ověří výchozí hodnoty instance bez argumentů. Vrací tuto instanci.
+3. **Constructor Propagation** (`assert_class_constructor`)  
+   *Spouští se jen při `deep_check=True`.* Ověří správné uložení argumentů konstruktoru.
+4. **Public API Contract** (`assert_class_interface`)  
+   *Spouští se jen při `deep_check=True`.* Ověří přítomnost dunder metod a serializátorů (`to_dict`, `to_json`).
+
+
 
 ---
 
@@ -20,14 +28,6 @@ Tento modul implementuje **Facade Pattern** — sjednocuje čtyři dílčí asse
 - **jednotný vstupní bod** pro všechny testy, které validují strukturu výjimky,  
 - **automatizovaný kontrolní mechanismus**, který zajišťuje, že výjimka splňuje všechny architektonické požadavky,  
 - **základní stavební kámen** pro `bulk_test` a další automatické testovací nástroje.
-
-Je navržen tak, aby byl:
-
-- deterministický,  
-- fail‑fast,  
-- modulární,  
-- snadno rozšiřitelný,  
-- čitelný a přehledný.
 
 ---
 

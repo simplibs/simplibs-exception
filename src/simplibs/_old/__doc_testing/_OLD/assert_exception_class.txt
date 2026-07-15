@@ -1,0 +1,287 @@
+assert_exception_class je hlavní orchestrátor celé testovací infrastruktury pro výjimky v knihovně SimpleException.
+Je to jediný vstupní bod, který provádí kompletní audit výjimky:
+
+dědičnost - assert_class_inheritance
+defaulty - assert_class_defaults
+konstruktor - assert_class_constructor
+public API - assert_class_interface
+
+Tento modul implementuje Facade Pattern — sjednocuje čtyři dílčí asserts do jedné konzistentní pipeline.
+
+Runs all available structural, constructor, default-value, and interface checks against the supplied exception class using a rigid sequential pipeline.
+
+Parametry:
+Poviné parametry:
+    jméno | typ | popis
+    subtests      | Any       | The native pytest subtests fixture manager instance.
+    exc_class     | type[Any] | Exception class to validate.
+Volitelné parametry:
+    jméno | typ | default | popis
+    expected_parents | type[Any] | tuple[type[Any], ...] | UNSET | An optional class type or a tuple of class types that the target exc_class must natively inherit from to satisfy custom polymorphic boundaries.
+    exact_match | bool | False | If True, performs strict equality comparison.
+    startswith | bool | False | If True, validates that the actual value starts with the expected value.
+    verbose | bool | True | Enables pytest subtests separation for standard modules.
+    verbose_constructor | bool | False | If True, expands individual constructor field checks.
+    intro | str | "" | Optional prefix added to generated subtest names.
+    deep_check | bool | True | If True, triggers advanced explicit constructor propagation and serializer API interface audits.
+Returns:
+    The instantiated exception object captured during the defaults verification run.
+
+Procesy
+# 1. Verify inheritance hierarchy contract (Fail-Fast gate)
+volání (ukázka předávaných parametrů):
+assert_class_inheritance(
+    subtests,
+    exc_class,
+    expected_parents=expected_parents,
+    verbose=verbose,
+    intro=intro
+)
+testuje:
+    assert issubclass(exc_class, BaseException)
+    assert issubclass(exc_class, SimpleExceptionData)
+    assert issubclass(exc_class, expected_parents) - pouze pokud je zadán parametr expected_parents
+
+# 2. Verify class-level default values and grab a vanilla instance
+# Pass comparison control parameters; default behavior is substring inclusion
+volání (ukázka předávaných parametrů):
+exc = assert_class_defaults(
+    subtests,
+    exc_class,
+    exact_match=exact_match,
+    startswith=startswith,
+    verbose=verbose,
+    intro=intro
+)
+testuje:
+    class_dict = exc_class.__dict__
+    return assert_exception_fields(
+        subtests,
+        exc,
+        error_name=class_dict.get("error_name", UNSET),
+        label=class_dict.get("label", UNSET),
+        message=class_dict.get("message", UNSET),
+        expected=class_dict.get("expected", UNSET),
+        value=class_dict.get("value", UNSET),
+        problem=class_dict.get("problem", UNSET),
+        context=class_dict.get("context", UNSET),
+        how_to_fix=class_dict.get("how_to_fix", UNSET),
+        exception=class_dict.get("exception", UNSET),
+        get_location=class_dict.get("get_location", UNSET),
+        skip_locations=class_dict.get("skip_locations", UNSET),
+        oneline=class_dict.get("oneline", UNSET),
+        exact_match=exact_match,
+        startswith=startswith,
+        verbose=verbose,
+        intro=intro + subintro,
+    )
+
+# Execute extended structural audits under deep checking conditions
+if deep_check:
+
+# 3. Verify explicit constructor propagation with dynamic telemetry payloads.
+volání (ukázka předávaných parametrů):
+assert_class_constructor(
+    subtests,
+    exc_class,
+    verbose=verbose and verbose_constructor,
+    intro=intro
+)
+testuje:
+    # Single Source of Truth: Define reference parameter matrix
+    _message = "<message>"
+    _value = "<value>"
+    _label = "<label>"
+    _expected = "<expected>"
+    _problem = "<problem>"
+    _context = "<context>"
+    _how_to_fix = "<how_to_fix>"
+    _error_name = "<ERROR_NAME>"
+    _exception = ValueError("test exception")
+    _get_location = False
+    _skip_locations = ("<skip_locations>",)
+    _oneline = True
+
+    # Pass the matrix directly into the class constructor gate (create a dummy test stub)
+    dummy_exc = exc_class(
+        message=_message,
+        value=_value,
+        label=_label,
+        expected=_expected,
+        problem=_problem,
+        context=_context,
+        how_to_fix=_how_to_fix,
+        error_name=_error_name,
+        exception=_exception,
+        get_location=_get_location,
+        skip_locations=_skip_locations,
+        oneline=_oneline,
+    )
+
+    # 1. Validate that the instance layout perfectly mirrors the original reference data
+    assert_exception_fields(
+        subtests,
+        dummy_exc,
+        message=_message,
+        value=_value,
+        label=_label,
+        expected=_expected,
+        problem=_problem,
+        context=_context,
+        how_to_fix=_how_to_fix,
+        error_name=_error_name,
+        exception=_exception,
+        get_location=_get_location,
+        skip_locations=_skip_locations,
+        oneline=_oneline,
+        exact_match=True,
+        verbose=verbose,
+        intro=intro + subintro,
+    )
+
+    # 2. String Smoke Check: Verify core diagnostic identities leak into str() representation.
+    # We use resilient substring checks ('in') to avoid breaking when layout presentation or styles change.
+    exc_str = str(dummy_exc)
+    assert _error_name in exc_str, (
+        f"Constructor failed to propagate error_name into str().\n"
+        f"Expected substring: {_error_name!r}\n"
+        f"Actual string output: {exc_str!r}"
+    )
+    assert _message in exc_str, (
+        f"Constructor failed to propagate message into str().\n"
+        f"Expected substring: {_message!r}\n"
+        f"Actual string output: {exc_str!r}"
+    )
+
+
+# 4. Verify public object API, dunder formatting, and serializers type integrity
+volání (ukázka předávaných parametrů):
+assert_class_interface(
+    subtests,
+    exc_class,
+    verbose=verbose,
+    intro=intro
+)
+testuje:
+    assert isinstance(str(exc), str)
+    assert isinstance(repr(exc), str)
+    assert isinstance(exc.to_dict(), dict)
+    assert isinstance(exc.to_debug_dict(), dict)
+    assert isinstance(exc.to_json(), str)
+
+
+
+_DESIGN_NOTES = """
+# assert_exception_class (Composite Exception Class Auditor)
+
+## Purpose
+Implements an architectural Facade Pattern that orchestrates a complete, multi-stage compliance matrix
+against any custom framework exception class definition. It serves as the primary master gateway
+used by high-level automated matrix test runners.
+
+## Comparison & Verbosity Orchestration
+The engine exposes granular control over validation logic and reporting:
+
+1. **Comparison Control:** Defaults to substring inclusion (`in` operator). If stricter validation is
+   required, the user must explicitly opt-in by setting `exact_match=True` (for full equality)
+   or `startswith=True` (for prefix validation).
+2. **Polymorphic Constraint Injection:** The `expected_parents` parameter bridges custom business architecture
+   contracts directly into the baseline verification flow. It allows developers to assert deep
+   polymorphic exception trapping (e.g., verifying an internal module exception can be intercepted via a generic
+   subsystem error handling block).
+3. **Verbosity Hierarchy:**
+   - **`verbose`:** The Master Gate controlling global reporting activity.
+   - **`verbose_constructor`:** The Fine-Tuning Gate. Only active if global `verbose` is True.
+
+## Pipeline Composition
+The pipeline follows a strict dependency order:
+1. Inheritance (Contract) -> 2. Defaults (Vanilla State) -> 3. Constructor (Propagation) -> 4. Interface (API).
+This ensures that if the class fails fundamental structural tests, the framework fails-fast before initializing
+dynamic reflection scanners.
+"""
+
+Příklady použití:
+
+testovací kod:
+
+@dataclass
+class SimpleExceptionInternalError(SimpleExceptionData, Exception):
+    """Internal library exception — no validation, direct output only."""
+
+    # Core identification override
+    error_name: str = "INTERNAL ERROR"
+
+    # --- REFERENCE PAYLOAD MATRIX (Quick declarative reference) ---
+    # The attributes below are inherited from SimpleExceptionData.
+    # Included as comments for instant developer visibility into available fields:
+    #
+    # value: Any = UNSET
+    # label: str | None = None
+    # expected: str | None = None
+    # problem: tuple[str, ...] | str | None = None
+    # context: tuple[str, ...] | str | None = None
+    # how_to_fix: tuple[str, ...] | str | None = None
+
+    def __post_init__(self):
+        # 1. Render the message via PRETTY mode singleton
+        from ...modes import PRETTY
+
+        rendered_message = PRETTY.render(self, validate=False)
+
+        # 2. Pass the formatted message to the native Exception layer.
+        # Calling Exception.__init__ directly guarantees that even with dynamic
+        # multi-inheritance shifts, the core string remains uncorrupted.
+        Exception.__init__(self, rendered_message)
+
+test:
+
+import pytest
+
+def test_internal_error_basic_contract(subtests):
+    """Runs the universal validation suite for inheritance, defaults, constructor and interface."""
+    assert_exception_class(
+        subtests,
+        SimpleExceptionInternalError,
+        verbose=False
+    )
+
+
+def test_str_contains_rendered_pretty_message():
+    """Ensure PRETTY rendering is applied and contains all critical metadata."""
+    err = SimpleExceptionInternalError(label="my-label", problem="something broke")
+    text = str(err)
+    assert "INTERNAL ERROR" in text
+    assert "my-label" in text
+    assert "something broke" in text
+
+
+def test_skips_validation_and_never_crashes_on_bad_types():
+    """Verify internal errors bypass validation and survive invalid field types."""
+    err = SimpleExceptionInternalError(label=12345)  # type: ignore
+    assert "12345" in str(err)
+
+
+Zde tedy se jedná o interí výjimku která není stavěná na SimpleException ale na SimpleExceptionData a Exception, proto po provední testu třídy se provádí dodatečné testy ověřující integritu.
+Tato ukázka demonstruje že testy je možné použít i na základ který vycází z SimpleExceptionData třídy - tedy shodný základ se SimpleException třídou.
+
+A tedy i to, že po provední testů pomocí naší util se dají prověést i dodatečné - tedy že naše utils provede všechny základní testy a tedy zároveň že ničemu nebrání aby byli provedeni i další dodatečné testy jsouli potřeba.
+
+Ukázka výstupu pro tento test:
+S verbose=True:
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract SUBPASSED[test_class_inheritance::test_base_exception_inheritance]                                    [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract SUBPASSED[test_class_inheritance::test_simple_exception_data_inheritance]                             [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract SUBPASSED[test_class_defaults::test_error_name]                                                       [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract SUBPASSED[test_class_interface::test_str]                                                             [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract SUBPASSED[test_class_interface::test_repr]                                                            [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract SUBPASSED[test_class_interface::test_to_dict]                                                         [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract SUBPASSED[test_class_interface::test_to_debug_dict]                                                   [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract SUBPASSED[test_class_interface::test_to_json]                                                         [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract PASSED                                                                                                [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_str_contains_rendered_pretty_message PASSED                                                                                         [ 66%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_skips_validation_and_never_crashes_on_bad_types PASSED                                                                              [100%]
+
+
+S verbose=False
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_internal_error_basic_contract PASSED                                                                                                [ 33%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_str_contains_rendered_pretty_message PASSED                                                                                         [ 66%]
+tests/core_logic/internal_exceptions/test_simple_exception_internal_error.py::test_skips_validation_and_never_crashes_on_bad_types PASSED                                                                              [100%]

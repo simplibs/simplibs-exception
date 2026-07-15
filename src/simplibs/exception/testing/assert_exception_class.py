@@ -21,7 +21,7 @@ def assert_exception_class(
     verbose_constructor: bool = False,
     intro: str = "",
     deep_check: bool = True,
-) -> Any:
+) -> BaseException:
     """Execute a complete validation suite for an exception class.
 
     Runs all available structural, constructor, default-value, and interface

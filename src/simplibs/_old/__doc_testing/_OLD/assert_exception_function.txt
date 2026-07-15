@@ -1,0 +1,610 @@
+assert_exception_function je hlavní orchestrátor pro testování funkcí, které mají vyvolávat výjimky typu SimpleException nebo jiných frameworkových chyb.
+Je to jediný vstupní bod, který provádí kompletní audit funkční logiky:
+
+validace, že objekt je callable,
+validace zda je objekt volatelný (assert_function_callable)
+validace pozitivního scénáře (assert_function_valid_input),
+validace negativního scénáře a typu výjimky (assert_function_raises),
+validace všech diagnostických polí výjimky (assert_exception_fields)
+
+Tento modul implementuje Facade Pattern — sjednocuje tři dílčí asserts do jedné konzistentní pipeline.
+
+This public testing utility orchestrates functional pipeline verifications. If provided,
+it executes a preliminary sanity check with a valid payload ensuring zero errors,
+followed by an isolated intercept gate (`pytest.raises`) checking that an invalid payload
+triggers the correct target exception. Finally, it audits the captured exception fields.
+
+Parametry:
+Required parameters:
+    jméno | typ | popis
+    subtests | Any | The native pytest subtests fixture manager instance.
+    func | Callable[..., Any] | The target callable validation or logic function under test.
+    *,
+    exception_type | type[BaseException] | The expected type blueprint of the raised exception.
+    invalid_params | tuple[Any, ...] | Kwargs | The explicit parameter payload (tuple or Kwargs) expected to trigger the target exception.
+Optional parameters:
+    valid_params | tuple[Any, ...] | Kwargs | UNSET | An optional explicit parameter payload (tuple or Kwargs) expected to pass without error.
+    error_name | str | UNSET | Expected internal system error identity code.
+    label | str | None | UNSET | Expected human-readable categorization title.
+    message | str | None | UNSET | Expected dynamic text body or terminal explanation block.
+    expected | str | None | UNSET | Expected value or state description criteria that was breached.Expected raw problematic value or object state.
+    value | Any = UNSET,
+    problem | str | tuple[str, ...] | None | UNSET | Expected breakdown sequence or root cause description.
+    context | str | tuple[str, ...] | None | UNSET | Expected technical parameters or diagnostic environmental metrics.
+    how_to_fix | str | tuple[str, ...] | None | UNSET | Expected structured actionable recommendations.
+    exception | Exception | type[Exception] | None | UNSET | Expected raw intercept nested exception instance.
+    get_location | bool | int | UNSET | Expected active relative stack scanning frame trace.
+    skip_locations | tuple[str, ...] | UNSET | Expected global or contextual exclusion string path filter.
+    oneline | bool | UNSET | Expected strict structural flag enforcing flat single-line message.
+Setting parameters:
+    exact_match | bool | False | If True, enforces strict exact string equality.
+    startswith | bool | False | If True, validates that the actual value starts with the expected value.
+    verbose | bool | True | If True, registers individual telemetry property checks as subtests.
+    intro | str | "" | Optional prefix string added to the generated subtest identity name.
+    deep_check | bool | True | If True, triggers advanced explicit telemetry field inspection.
+Returns:
+    The caught, instantiated exception object.
+
+# 1. Verify that the target under audit is an executable object
+volání (ukázka předávaných parametrů):
+    assert_function_callable(
+        subtests,
+        func, v
+        erbose=verbose,
+        intro=intro
+    )
+testuje:
+    assert callable(func)
+
+# 2. Sanity check: Execute positive pipeline if valid_params is provided
+volání (ukázka předávaných parametrů):
+    assert_function_valid_input(
+        subtests,
+        func,
+        valid_params=valid_params,
+        verbose=verbose,
+        intro=intro
+    )
+testuje:
+    # Normalize input variation data into strict execution components (*args, **kwargs)
+    args, kwargs = process_params(valid_params)
+
+    # Verify that the execution pipeline completes natively without any side-effect drops
+    func(*args, **kwargs)
+
+# 3. Intercept execution failure and capture the triggered framework exception
+volání (ukázka předávaných parametrů):
+  assert_function_raises(
+      subtests,
+      func,
+      invalid_params=invalid_params,
+      exception_type=exception_type,
+      verbose=verbose,
+      intro=intro
+  )
+testuje:
+    # Extract standard execution components (*args, **kwargs) from the input wrapper
+    args, kwargs = process_params(invalid_params)
+
+    # 1. Verify that the function boundary execution successfully forces an exception drop
+    with pytest.raises(BaseException) as exc_info:
+        func(*args, **kwargs)
+
+    # Safely extract the literal exception instance captured by the pytest engine
+    exc = exc_info.value
+
+    # 2. Verify that the triggered exception matches the specific expected type mapping
+    if exception_type is not UNSET:
+        # Framework Guard: If the raised error type is fundamentally unexpected (e.g., a native TypeError
+        # caused by bad signature mapping), we must issue a hard-fail immediately. Continuing into
+        # downstream telemetry checks would trigger misleading AttributeError chains on the native error object.
+        exception_type: type[BaseException] | tuple[type[BaseException], ...]
+        if not isinstance(exc, exception_type):
+            expected_names = (
+                exception_type.__name__
+                if isinstance(exception_type, type)
+                else ", ".join(t.__name__ for t in exception_type)
+            )
+            pytest.fail(
+                f"\n[Framework Guard] Target function raised an unexpected exception type!\n"
+                f"Expected: {expected_names}\n"
+                f"Actual:   {type(exc).__name__} ({exc})\n\n"
+                f"💡 Tip: If you received an unexpected TypeError or failure, verify your signatures. "
+                f"Remember that all operational payloads must be strictly wrapped inside a tuple: "
+                f"invalid_params=(value,) or Kwargs instance."
+            )
+
+        # Re-verify within the subtest context for standard report logging
+        exception_type: type[BaseException] | tuple[type[BaseException], ...]
+        assert isinstance(exc, exception_type)
+
+
+# 4. Perform localized granular telemetry deep checking if enabled
+if deep_check:
+volání (ukázka předávaných parametrů):
+    assert_exception_fields(
+        subtests,
+        exc,
+        error_name=error_name,
+        label=label,
+        message=message,
+        expected=expected,
+        value=value,
+        problem=problem,
+        context=context,
+        how_to_fix=how_to_fix,
+        exception=exception,
+        get_location=get_location,
+        skip_locations=skip_locations,
+        oneline=oneline,
+        exact_match=exact_match,
+        startswith=startswith,
+        verbose=verbose,
+        intro=intro
+    )
+testuje:
+    if error_name is not UNSET:
+        assert error_name in exc.error_name
+
+    if label is not UNSET:
+        assert label in exc.label
+
+    if message is not UNSET:
+        assert message in exc.message
+
+    if expected is not UNSET:
+        assert expected in exc.expected
+
+    if value is not UNSET:
+        assert value == exc.value
+
+    if problem is not UNSET:
+        assert problem in exc.problem
+
+    if context is not UNSET:
+        assert context in exc.context
+
+    if how_to_fix is not UNSET:
+        assert how_to_fix in exc.how_to_fix
+
+    if exception is not UNSET:
+        assert exception == exc.exception
+
+    if get_location is not UNSET:
+        assert get_location == exc.get_location
+
+    if skip_locations is not UNSET:
+        assert skip_locations == exc.skip_locations
+
+    if oneline is not UNSET:
+        assert oneline == exc.oneline
+
+    Poznámka:
+    zde uvedené asserty jsou pro základní testování in které je univerzální pro všechny scénáře ale méně přesné pro konkrétní situace.
+    K dyipozici jsou pak dva nástroje v podobě parametrů, kde :
+    exact_match testuje skrze ==
+    startswith testuje skrze startswith metodu
+
+_DESIGN_NOTES = """
+# assert_exception_function (Composite Functional Boundary Auditor)
+
+## Purpose
+Implements a clean Facade Pattern that orchestrates functional validation pipelines. It synchronizes
+positive execution sanity passes, defensive exception interception, and intensive telemetry
+property checking into a unified, single-invocation testing matrix.
+
+## Parametric Contract Boundaries
+Following the framework-wide strict signatures policy, both `invalid_params` and `valid_params`
+accept explicit argument structures consisting of a positional tuple (representing `*args`)
+or a standalone `Kwargs` configuration wrapper.
+
+## Comparison Modalities (Opt-in Architecture)
+The engine defaults to substring inclusion (`in` operator), which provides the most resilient
+audit for dynamic error messages. Stricter validation modes are available via explicit flags:
+- **`exact_match=True`**: Forces full-string equality (useful for static error codes).
+- **`startswith=True`**: Forces prefix-based validation (useful for messages with dynamic suffixes).
+
+## Refactored Operational Flow
+The execution sequence builds a progressive evaluation matrix:
+1. Callable Isolation Gate -> 2. Happy Path Clearance -> 3. Negative Intercept Gate -> 4. Deep Telemetry Evaluation.
+
+## `deep_check` Intent Scope Calibration
+`deep_check` is scoped to wrap the exhaustive attribute inspection layer.
+- **`True` (Default):** Full compliance audit, validating both exception type and diagnostic message precision.
+- **`False`:** High-speed smoke testing, validating only the exception boundary signature.
+"""
+
+
+Příklady použití:
+
+testovací kod 1.
+def raise_system_blacklist_mutation_error(
+    value: Any
+) -> NoReturn:
+    """Explicitly raises an error when an attempt is made to mutate the internal read-only system blacklist."""
+    raise SimpleExceptionSettingsError(
+        value=value,
+        label="SimpleExceptionSettings",
+        problem="The protected '_SYSTEM_BLACKLIST' attribute is strict read-only metadata.",
+        how_to_fix=(
+            "Do not attempt to alter the core framework system-level blacklist.",
+            "To skip your custom repository paths or wrapper files, append them to: "
+            "SimpleExceptionSettings.LOCATION_BLACKLIST",
+        ),
+    )
+
+test:  - jednoduchí zadání kde testujeme jen negativní průběh:
+
+def test_raise_system_blacklist_mutation_error(subtests):
+    """Verify that the raiser terminates execution with a precise, fully-populated internal error."""
+    assert_exception_function(
+        subtests,
+        raise_system_blacklist_mutation_error,
+        invalid_params=("bad-value",),
+        exception_type=SimpleExceptionSettingsError,
+        value="bad-value",
+        label="SimpleExceptionSettings",
+        problem="The protected '_SYSTEM_BLACKLIST' attribute is strict read-only metadata.",
+        how_to_fix=(
+            "Do not attempt to alter the core framework system-level blacklist.",
+            "To skip your custom repository paths or wrapper files, append them to: "
+            "SimpleExceptionSettings.LOCATION_BLACKLIST",
+        ),
+    )
+
+Ukázka výstupu pro tento test:
+S verbose=True:
+tests/core_logic/settings_meta/validations/test_raise_system_blacklist_mutation_error.py::test_raise_system_blacklist_mutation_error SUBPASSED[test_callable]                                                          [100%]
+tests/core_logic/settings_meta/validations/test_raise_system_blacklist_mutation_error.py::test_raise_system_blacklist_mutation_error SUBPASSED[test_raises_exception]                                                  [100%]
+tests/core_logic/settings_meta/validations/test_raise_system_blacklist_mutation_error.py::test_raise_system_blacklist_mutation_error SUBPASSED[test_exception_type]                                                    [100%]
+tests/core_logic/settings_meta/validations/test_raise_system_blacklist_mutation_error.py::test_raise_system_blacklist_mutation_error SUBPASSED[test_label]                                                             [100%]
+tests/core_logic/settings_meta/validations/test_raise_system_blacklist_mutation_error.py::test_raise_system_blacklist_mutation_error SUBPASSED[test_value]                                                             [100%]
+tests/core_logic/settings_meta/validations/test_raise_system_blacklist_mutation_error.py::test_raise_system_blacklist_mutation_error SUBPASSED[test_problem]                                                           [100%]
+tests/core_logic/settings_meta/validations/test_raise_system_blacklist_mutation_error.py::test_raise_system_blacklist_mutation_error SUBPASSED[test_how_to_fix]                                                        [100%]
+tests/core_logic/settings_meta/validations/test_raise_system_blacklist_mutation_error.py::test_raise_system_blacklist_mutation_error PASSED                                                                            [100%]
+
+
+S verbose=False
+tests/core_logic/settings_meta/validations/test_raise_system_blacklist_mutation_error.py::test_raise_system_blacklist_mutation_error PASSED                                                                            [100%]
+
+
+testovací kod 2:
+def validate_dynamic_cls_cache(
+    value: Any
+) -> None:
+    """Verifies that the value is an empty dict — only allowed for cache reset."""
+    if value != {}:
+        raise SimpleExceptionSettingsError(
+            value=value,
+            label="_dynamic_cls_cache",
+            expected="an empty dict {} — for configuration and state reset routines only",
+            problem="the multi-inheritance class cache is handled internally and cannot be manually overwritten",
+            how_to_fix=(
+                "To wipe the framework runtime state safely, invoke: SimpleExceptionSettings.reset()",
+                "To clear this cache manually during hot-reloads or tests, assign an empty dict: "
+                "SimpleExceptionSettings._dynamic_cls_cache = {}",
+            ),
+        )
+
+test:  - ukázka s použitím mark.parametrize konstruktura přidaným pozitivním průchodem do jednoho testu:
+
+@pytest.mark.parametrize("invalid_value", [
+    "bad-value",            # String primitive
+    123,                    # Numeric primitive
+    (),                     # Void object / empty tuple as parameter value
+    [],                     # List structural containers
+    {"cached_key": str},    # Non-empty dict (CRITICAL: manual mutation attempt)
+])
+def test_validate_dynamic_cls_cache(subtests, invalid_value):
+    """Verify that any non-empty dict or invalid data type triggers a protective state violation."""
+    assert_exception_function(
+        subtests,
+        validate_dynamic_cls_cache,
+        invalid_params=(invalid_value,),
+        valid_params=({},),
+        exception_type=SimpleExceptionSettingsError,
+        value=invalid_value,
+        label="_dynamic_cls_cache",
+        expected="an empty dict {} — for configuration and state reset routines only",
+        problem="the multi-inheritance class cache is handled internally and cannot be manually overwritten",
+        how_to_fix=(
+            "To wipe the framework runtime state safely, invoke: SimpleExceptionSettings.reset()",
+            "To clear this cache manually during hot-reloads or tests, assign an empty dict: "
+            "SimpleExceptionSettings._dynamic_cls_cache = {}",
+        ),
+    )
+
+
+  Ukázka výstupu pro tento test:
+S verbose=True:
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] SUBPASSED[test_callable]                                                                     [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] SUBPASSED[test_valid_input]                                                                  [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] SUBPASSED[test_raises_exception]                                                             [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] SUBPASSED[test_exception_type]                                                               [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] SUBPASSED[test_label]                                                                        [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] SUBPASSED[test_expected]                                                                     [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] SUBPASSED[test_value]                                                                        [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] SUBPASSED[test_problem]                                                                      [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] SUBPASSED[test_how_to_fix]                                                                   [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] PASSED                                                                                       [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] SUBPASSED[test_callable]                                                                           [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] SUBPASSED[test_valid_input]                                                                        [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] SUBPASSED[test_raises_exception]                                                                   [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] SUBPASSED[test_exception_type]                                                                     [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] SUBPASSED[test_label]                                                                              [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] SUBPASSED[test_expected]                                                                           [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] SUBPASSED[test_value]                                                                              [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] SUBPASSED[test_problem]                                                                            [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] SUBPASSED[test_how_to_fix]                                                                         [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] PASSED                                                                                             [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] SUBPASSED[test_callable]                                                                [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] SUBPASSED[test_valid_input]                                                             [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] SUBPASSED[test_raises_exception]                                                        [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] SUBPASSED[test_exception_type]                                                          [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] SUBPASSED[test_label]                                                                   [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] SUBPASSED[test_expected]                                                                [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] SUBPASSED[test_value]                                                                   [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] SUBPASSED[test_problem]                                                                 [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] SUBPASSED[test_how_to_fix]                                                              [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] PASSED                                                                                  [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] SUBPASSED[test_callable]                                                                [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] SUBPASSED[test_valid_input]                                                             [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] SUBPASSED[test_raises_exception]                                                        [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] SUBPASSED[test_exception_type]                                                          [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] SUBPASSED[test_label]                                                                   [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] SUBPASSED[test_expected]                                                                [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] SUBPASSED[test_value]                                                                   [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] SUBPASSED[test_problem]                                                                 [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] SUBPASSED[test_how_to_fix]                                                              [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] PASSED                                                                                  [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] SUBPASSED[test_callable]                                                                [100%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] SUBPASSED[test_valid_input]                                                             [100%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] SUBPASSED[test_raises_exception]                                                        [100%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] SUBPASSED[test_exception_type]                                                          [100%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] SUBPASSED[test_label]                                                                   [100%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] SUBPASSED[test_expected]                                                                [100%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] SUBPASSED[test_value]                                                                   [100%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] SUBPASSED[test_problem]                                                                 [100%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] SUBPASSED[test_how_to_fix]                                                              [100%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] PASSED                                                                                  [100%]
+
+
+S verbose=False
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[bad-value] PASSED                                                                                       [ 20%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[123] PASSED                                                                                             [ 40%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value2] PASSED                                                                                  [ 60%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value3] PASSED                                                                                  [ 80%]
+tests/core_logic/settings_meta/validations/test_validate_dynamic_cls_cache.py::test_validate_dynamic_cls_cache[invalid_value4] PASSED                                                                                  [100%]
+
+
+testovací kod 3:
+def validate_location_blacklist(
+    value: Any
+) -> None:
+    """Verifies that the value is a tuple containing only strings."""
+    # 1. Verify that the provided value is a tuple
+    if not isinstance(value, tuple):
+        raise SimpleExceptionSettingsError(
+            value=value,
+            label="LOCATION_BLACKLIST",
+            expected="tuple[str, ...] — a tuple of strings containing filename patterns",
+            problem="value is not a tuple",
+            how_to_fix=(
+                "Wrap the value in a tuple: ('filename.py',)",
+                "To set an empty blacklist use an empty tuple: ()",
+            ),
+        )
+
+    # 2. Verify the items inside the tuple
+    bad_items = [i for i in value if not isinstance(i, str)]
+    if bad_items:
+        raise SimpleExceptionSettingsError(
+            value=bad_items,
+            label="LOCATION_BLACKLIST",
+            expected="a tuple containing only string elements",
+            problem=f"tuple contains invalid non-string elements (found {len(bad_items)} invalid item(s))",
+            how_to_fix=(
+                "Check all items — each one must be a string (str).",
+                "Each item defines a file name pattern that will be skipped during location resolution.",
+            ),
+        )
+
+test:  - ukázka jak se dá testovat více výjimek obsažené v jednom kodu a parametrizované použití testu na pozitivní průchod:
+# -----------------------------------------------------------------------------
+# 1. Valid Input Matrix
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("valid_input", [
+    (),                               # Native empty tuple pass-through
+    ("a.py", "b.py"),                 # Populated tuple
+    ("single_element.py",),           # Single-element tuple
+])
+def test_validate_location_blacklist_valid_input(subtests, valid_input):
+    """Verify that the validator successfully permits empty tuples and tuples consisting entirely of strings."""
+    assert_function_valid_input(
+        subtests,
+        validate_location_blacklist,
+        valid_params=(valid_input,),  # Safe encapsulation into the execution tuple
+        verbose=False
+    )
+
+
+# -----------------------------------------------------------------------------
+# 2. Invalid Input Matrix — Type Pollution (Container Level)
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("invalid_container", [
+    ["a.py", "b.py"],                 # Populated list structural container
+    "a.py",                           # Raw string primitive
+    123,                              # Numeric primitive
+    {"a.py", "b.py"},                 # Native set container
+    {"key": "value"},                 # Native dictionary container
+])
+def test_validate_location_blacklist_invalid_container(subtests, invalid_container):
+    """Verify that non-tuple data types trigger a structural constraint error enforcing an immutable boundary."""
+    assert_exception_function(
+        subtests,
+        validate_location_blacklist,
+        invalid_params=(invalid_container,),  # Encapsulated on-the-fly into execution tuple
+        valid_params=((),),                   # Gold-standard verification of an empty compliant state
+        exception_type=SimpleExceptionSettingsError,
+        value=invalid_container,              # Pure un-wrapped container for exact attribute matching
+        label="LOCATION_BLACKLIST",
+        expected="tuple[str, ...] — a tuple of strings containing filename patterns",
+        problem="value is not a tuple",
+        how_to_fix=(
+            "Wrap the value in a tuple: ('filename.py',)",
+            "To set an empty blacklist use an empty tuple: ()",
+        ),
+    )
+
+
+# -----------------------------------------------------------------------------
+# 3. Invalid Input Matrix — Element Constraints (Deep-Scan Evaluation)
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("polluted_sequence, expected_extracted_errors", [
+    (("a.py", 123, None), [123, None]),          # Standard mixed pollution
+    ((True, "b.py"), [True]),                    # Boolean booby-trap (subclass of int)
+    (((1, 2), "a.py"), [(1, 2)]),                 # Nested tuple pollution
+])
+def test_validate_location_blacklist_polluted_elements(subtests, polluted_sequence, expected_extracted_errors):
+    """Verify that a deep-scan aggregates and reports all non-string elements inside the tuple simultaneously."""
+    assert_exception_function(
+        subtests,
+        validate_location_blacklist,
+        invalid_params=(polluted_sequence,),  # Encapsulated on-the-fly into execution tuple
+        valid_params=((),),                   # Gold-standard verification of an empty compliant state
+        exception_type=SimpleExceptionSettingsError,
+        value=expected_extracted_errors,       # The validator extracts a list of bad elements
+        label="LOCATION_BLACKLIST",
+        expected="a tuple containing only string elements",
+        problem="tuple contains invalid non-string elements",
+        how_to_fix=(
+            "Check all items — each one must be a string (str).",
+            "Each item defines a file name pattern that will be skipped during location resolution.",
+        ),
+    )
+
+
+testy jde tedy libovolně kombinovat  a jde je začlenit do testů logik které dané výjimky v sobě používají
+
+zde je ukázka SimpleExceptionSettings třídy:
+
+class SimpleExceptionSettings(metaclass=SettingsMeta):
+    """Central configuration registry — the single source of truth for the entire exception ecosystem."""
+
+    # --- System Blacklist (Read-Only) ---
+    # Visible for maximum architectural transparency, but sealed at the metaclass layer.
+    _SYSTEM_BLACKLIST: tuple[str, ...] = ("<", "simplibs/exception")
+
+    # --- Live Configuration Attributes ---
+    GET_LOCATION: int | bool = 1
+    LOCATION_BLACKLIST: tuple[str, ...] = _SYSTEM_BLACKLIST
+    MESSAGE_MODE: "ModeBaseProtocol" = PRETTY
+    VALUE_TRUNCATION_LENGTH: int = 70
+
+    # --- Internal Cache ---
+    _dynamic_cls_cache: dict[
+        tuple[type[BaseException], type[BaseException]], type[BaseException]
+    ] = {}
+
+    # --- Prevent Instantiation ---
+    def __init__(self) -> None:
+        raise SimpleExceptionSettingsError(
+            label="SimpleExceptionSettings",
+            problem="This configuration registry class is not intended to be instantiated.",
+            how_to_fix=(
+                "Access or modify configuration attributes directly on the class: SimpleExceptionSettings.GET_LOCATION",
+                "To restore factory defaults programmatically, call: SimpleExceptionSettings.reset()",
+            ),
+        )
+
+    # --- Reset to Default Factory Values ---
+    @classmethod
+    def reset(cls) -> None:
+        """Resets all operational settings and internal caches back to their factory default values."""
+        cls.GET_LOCATION = 1
+        cls.LOCATION_BLACKLIST = ()
+        cls.VALUE_TRUNCATION_LENGTH = 70
+        cls.MESSAGE_MODE = PRETTY
+        cls._dynamic_cls_cache = {}
+
+
+A zd je jak vypadá její test:
+
+# -----------------------------------------------------------------------------
+# 1. Instantiation Guard Audits (Framework-Driven)
+# -----------------------------------------------------------------------------
+
+def test_cannot_be_instantiated_raises_with_perfect_telemetry(subtests):
+    """Confirms that the registry acts as a static namespace and prevents accidental object instantiation.
+
+    Leverages the centralized framework validation engine to verify the completeness
+    of diagnostic logs and recovery actions.
+    """
+    assert_exception_function(
+        subtests,
+        # TRICK: Passing the class itself as the target callable engine
+        SimpleExceptionSettings,
+        invalid_params=(),  # Attempting to call the constructor without arguments
+        exception_type=SimpleExceptionSettingsError,
+        label="SimpleExceptionSettings",
+        problem="This configuration registry class is not intended to be instantiated.",
+        how_to_fix=(
+            "Access or modify configuration attributes directly on the class: SimpleExceptionSettings.GET_LOCATION",
+            "To restore factory defaults programmatically, call: SimpleExceptionSettings.reset()",
+        ),
+    )
+
+
+# -----------------------------------------------------------------------------
+# 2. Immutable System Boundary Verification
+# -----------------------------------------------------------------------------
+
+def test_system_blacklist_contains_expected_default_patterns():
+    """Verifies that the core system-protected exclusion patterns are present for stack frame pruning."""
+    assert "<" in SimpleExceptionSettings._SYSTEM_BLACKLIST
+    assert "simplibs/exception" in SimpleExceptionSettings._SYSTEM_BLACKLIST
+
+
+# -----------------------------------------------------------------------------
+# 3. State Mutation & Factory Reset Pipelines
+# -----------------------------------------------------------------------------
+
+def test_reset_restores_get_location_default():
+    """Ensures runtime overrides to call-site traversal depth are wiped by factory reset."""
+    SimpleExceptionSettings.GET_LOCATION = 5
+    SimpleExceptionSettings.reset()
+    assert SimpleExceptionSettings.GET_LOCATION == 1
+
+
+def test_reset_restores_value_truncation_length_default():
+    """Validates that string clipping boundaries are restored to their production default after reset."""
+    SimpleExceptionSettings.VALUE_TRUNCATION_LENGTH = 999
+    SimpleExceptionSettings.reset()
+    assert SimpleExceptionSettings.VALUE_TRUNCATION_LENGTH == 70
+
+
+def test_reset_restores_message_mode_default():
+    """Confirms that the active presentation strategy resets to the PRETTY (default) mode."""
+    SimpleExceptionSettings.MESSAGE_MODE = SIMPLE
+    SimpleExceptionSettings.reset()
+    assert SimpleExceptionSettings.MESSAGE_MODE is PRETTY
+
+
+def test_reset_clears_dynamic_cls_cache():
+    """Verifies that internal memoization caches for synthetic exception classes are cleared during reset."""
+    # Bypass metaclass validation to inject mock cache entry for testing
+    type.__setattr__(SimpleExceptionSettings, "_dynamic_cls_cache", {"fake": "entry"})
+    assert SimpleExceptionSettings._dynamic_cls_cache == {"fake": "entry"}
+
+    SimpleExceptionSettings.reset()
+    assert SimpleExceptionSettings._dynamic_cls_cache == {}
+
+
+def test_reset_location_blacklist_consistency():
+    """Validates that factory reset clears user-defined blacklist additions."""
+    SimpleExceptionSettings.LOCATION_BLACKLIST = ("something.py",)
+    SimpleExceptionSettings.reset()
+    assert SimpleExceptionSettings.LOCATION_BLACKLIST == ()

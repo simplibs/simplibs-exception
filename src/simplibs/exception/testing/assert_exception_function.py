@@ -83,7 +83,12 @@ def assert_exception_function(
         The caught, instantiated exception object.
     """
     # 1. Verify that the target under audit is an executable object
-    assert_function_callable(subtests, func, verbose=verbose, intro=intro)
+    assert_function_callable(
+        subtests,
+        func,
+        verbose=verbose,
+        intro=intro
+    )
 
     # 2. Sanity check: Execute positive pipeline if valid_params is provided
     if valid_params is not UNSET:
