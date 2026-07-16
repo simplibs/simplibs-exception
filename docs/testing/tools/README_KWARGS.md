@@ -1,8 +1,8 @@
-# 📦 `Kwargs`
+# 🧩 `Kwargs`
 
 **Semantic Invocation Wrapper**
 
-## 🧩 Purpose of the Utility
+## 🏷️ Purpose of the Utility
 
 When conducting automated functional testing (such as executing matrix sweeps via `bulk_test`), 
 we encounter a fundamental type ambiguity in Python. A standard dictionary `{...}` can represent either:

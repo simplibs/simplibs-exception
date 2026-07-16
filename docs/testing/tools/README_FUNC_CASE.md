@@ -1,4 +1,4 @@
-# 📦 `FuncCase`
+# 🧩 `FuncCase`
 
 **Comprehensive Functional Audit Blueprint for Bulk Testing**
 
@@ -13,7 +13,7 @@ as isolated standalone tests or nested inside matrix-based suite orchestrators.
 
 ---
 
-### ⚙️ Architectural Principles
+## ⚙️ Architectural Principles
 
 * **Declarative Schema Design:** 
 Replaces verbose imperative code ("how" to run assertions) with a predictable state mapping 

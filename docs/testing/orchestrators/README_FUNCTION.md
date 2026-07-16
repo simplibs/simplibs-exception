@@ -1,4 +1,4 @@
-# 📦 `assert_exception_function`
+# ✨ `assert_exception_function`
 
 **Comprehensive Functional Logic Audit**
 

@@ -1,4 +1,4 @@
-# 📦 Presentation Modes
+# 🧩 Presentation Modes
 
 **Unified Elastic Exception Visualization Engine for SimpleException**
 

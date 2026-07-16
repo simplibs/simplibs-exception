@@ -1,4 +1,4 @@
-# 🧩 `SimpleExceptionData`
+# 📝 `SimpleExceptionData`
 
 **The Pure State Storage Layer and Data Model for SimpleException**
 

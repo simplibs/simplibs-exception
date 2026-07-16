@@ -1,10 +1,10 @@
-# 📦 `raise_with_location_offset`
+# 🧩 `raise_with_location_offset`
 
 **Unified Re-raising and Call-Site Calibration Utility**
 
 ---
 
-## 🧩 Purpose of the Utility
+## 🏷️ Purpose of the Utility
 
 When managing errors across multi-layered software architectures—such as API controllers, 
 database adapters, or middleware wrappers—developers frequently catch an exception 

@@ -1,10 +1,10 @@
-# 📦 `bool_or_exception`
+# 🧩 `bool_or_exception`
 
 **Bi-Modal Conditional Validation Utility**
 
 ---
 
-## 🧩 Purpose of the Utility
+## 🏷️ Purpose of the Utility
 
 When building robust data validation engines, API layers, or defensive guardrails, 
 developers frequently balance two distinct error-handling strategies:

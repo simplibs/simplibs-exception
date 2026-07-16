@@ -1,4 +1,4 @@
-# 📦 `assert_exception_class`
+# ✨ `assert_exception_class`
 
 **Comprehensive Exception Class Audit**
 

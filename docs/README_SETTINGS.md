@@ -1,4 +1,4 @@
-# ✨ `SimpleExceptionSettings`
+# 🔧 `SimpleExceptionSettings`
 
 **The Central Configuration Registry and Single Source of Truth for Exception Behavior**
 

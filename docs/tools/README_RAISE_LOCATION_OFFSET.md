@@ -1,10 +1,10 @@
-# 📦 `raise_location_offset`
+# 🧩 `raise_location_offset`
 
 **Declarative Stack-Frame Calibration Decorator**
 
 ---
 
-## 🧩 Purpose of the Utility
+## 🏷️ Purpose of the Utility
 
 In modular software architectures, helper validation functions, gateway assertions, 
 or utility wrappers frequently perform runtime parameter checks. 
