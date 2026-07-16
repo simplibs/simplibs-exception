@@ -1,4 +1,4 @@
-# 🌋 `SimpleException`
+# 🧠 `SimpleException`
 
 **The Active Execution Engine, Dynamic Inheritance, and Exception Lifecycle**
 
