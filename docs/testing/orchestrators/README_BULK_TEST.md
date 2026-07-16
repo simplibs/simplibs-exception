@@ -1,4 +1,4 @@
-# ✨ `exceptions_bulk_test`
+# 🌋 `exceptions_bulk_test`
 
 **Automated Subsystem Matrix Testing**
 
