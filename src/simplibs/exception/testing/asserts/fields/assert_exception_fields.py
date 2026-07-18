@@ -99,7 +99,9 @@ def assert_exception_fields(
 
     if skip_locations is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_skip_locations", verbose=verbose):
-            assert skip_locations == exc.skip_locations
+            actual = exc.skip_locations
+            expected = skip_locations if isinstance(skip_locations, tuple) else (skip_locations,)
+            assert tuple(actual[:len(expected)]) == expected
 
     if oneline is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_oneline", verbose=verbose):
@@ -130,4 +132,24 @@ The engine routes string-based attributes through a multi-modal comparator suppo
 ## Sentinel Protection Design
 Defaults to `UNSET` to allow selective validation. This explicitly distinguishes between 
 skipping an evaluation (`UNSET`) and asserting an explicit empty state (`None`/`""`).
+
+## Composite Field Handling: `skip_locations`
+The `skip_locations` attribute is a *composite, constructor-processed field*.  
+During initialization, the framework expands the user‑declared value by merging:
+
+1. the class-level declaration (`skip_locations` or `_skip_locations`),
+2. the global user blacklist (`SimpleExceptionSettings.LOCATION_BLACKLIST`),
+3. the system-protected frames (`SimpleExceptionSettings._SYSTEM_BLACKLIST`).
+
+Because the final runtime value is always a **superset** of the class-level declaration, 
+strict equality cannot be used for validation.
+
+Instead, the validator:
+
+- normalizes the expected value into a tuple (to avoid string‑splitting into characters),
+- and asserts that the declared values form a **prefix** of the fully processed sequence.
+
+This guarantees semantic correctness of constructor propagation while remaining independent 
+of global/system blacklist contents.
+
 """

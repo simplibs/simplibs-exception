@@ -94,3 +94,17 @@ def test_primitive_and_structural_direct_assertions():
     assert_exception_fields(spy, exc, exception=None)
     with pytest.raises(AssertionError):
         assert_exception_fields(spy, exc, exception=ValueError())
+
+def test_skip_locations_prefix_and_string_normalization():
+    """Verify that skip_locations is validated via prefix matching and string inputs are normalized."""
+    exc = DummyExceptionDouble()
+    spy = SubtestNoOpSpy()
+
+    # exc.skip_locations = ("simplibs.internal",)
+
+    # 1. String input must be normalized to tuple and match prefix
+    assert_exception_fields(spy, exc, skip_locations="simplibs.internal")
+
+    # 2. Wrong prefix must fail
+    with pytest.raises(AssertionError):
+        assert_exception_fields(spy, exc, skip_locations="other.package")

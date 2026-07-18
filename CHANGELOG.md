@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.1] - 2026-07-18
+
+### 🐛 Fixed
+
+* **skip_locations Validation Logic**:  
+  Updated `assert_exception_fields` to correctly validate `skip_locations` as a *composite constructor‑processed field*.  
+  The validator now:
+  - normalizes string inputs into tuple form to prevent character‑level splitting,
+  - and verifies that class‑declared values form a **prefix** of the fully processed runtime sequence (local declaration + global blacklist + system blacklist).  
+  This replaces the previous strict equality check, which did not reflect the actual behavior of `process_skip_locations()`.
+
+### 📋 Improved
+
+* **Test Reliability**:  
+  The new prefix‑based validation ensures accurate and stable testing of exception classes whose `skip_locations` values are expanded during initialization.  
+  This change is fully backward‑compatible and aligns the testing engine with the real constructor semantics of `SimpleException`.
+
+---
+
 ## [1.0.0] - 2026-07-16
 
 ### ⚠️ Breaking Changes
