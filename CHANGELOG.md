@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.2] - 2026-09-07
+
+### 🐛 Fixed
+
+* **`maybe_subtest` Return Type Annotation**:
+Updated the public return type hint of `maybe_subtest` from `Iterator[Any]` to `AbstractContextManager[Any]`.
+This resolves static inspection errors (`PyTypeChecker`) in external packages and dependent test suites consuming `maybe_subtest` within `with` blocks.
+An internal `# noinspection PyTypeChecker` was applied strictly to the helper's definition to account for Python's `@contextmanager` generator dualism while delivering a clean, fully typed interface for consumers.
+* 
+
+---
+
 ## [1.0.1] - 2026-07-18
 
 ### 🐛 Fixed
