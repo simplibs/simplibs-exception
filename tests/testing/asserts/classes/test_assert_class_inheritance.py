@@ -3,7 +3,7 @@ Tests for assert_class_inheritance — verification of mandatory base class inhe
 """
 import pytest
 from typing import Any
-from simplibs.exception.SimpleExceptionData import SimpleExceptionData
+from simplibs.exception.core.SimpleExceptionData import SimpleExceptionData
 from simplibs.exception.testing.asserts.classes.assert_class_inheritance import assert_class_inheritance
 
 # -----------------------------------------------------------------------------

@@ -157,6 +157,24 @@ You can easily build your own layout formats (e.g., HTML, Slack message blocks) 
 
 ---
 
+## 📚 Shared Exception Library
+
+Beyond the base `SimpleException`, the framework ships a categorized tree of ready-to-use, general-purpose
+exceptions — `SimpleError` as the common root, plus families like `ValidationError`/`ParamError`,
+`StateError`/`InitializationError`/`ConfigurationError`, `ResourceError`/`NotFoundError`/`AlreadyExistsError`/`AccessError`,
+`OperationError`, `ConversionError`, and `DependencyError`. Every `simplibs` library imports what it needs
+from here instead of redefining an equivalent exception locally.
+
+```python
+from simplibs.exception.exceptions import ParamError
+
+raise ParamError(label="age", expected="a non-negative integer", value=-5)
+```
+
+➡️ [README_EXCEPTIONS.md](https://github.com/simplibs/simplibs-exception/blob/main/docs/exceptions/README_EXCEPTIONS.md)
+
+---
+
 ## 🧰 Built-in Developer Tools
 
 The framework provides helper functions to minimize repetitive error-handling boilerplate:
@@ -176,6 +194,20 @@ def validate_age(age: int, return_bool: bool = False) -> bool:
 ```
 
 ➡️ [README_BOOL_OR_EXCEPTION.md](https://github.com/simplibs/simplibs-exception/blob/main/docs/tools/README_BOOL_OR_EXCEPTION.md)
+
+### `build_validation_error`
+
+A factory that builds a fully structured `ValidationError` for a failed user-supplied callable rule
+(a `lambda` or plain function), automatically extracting the callable's name into the diagnostic message.
+
+```python
+from simplibs.exception.exceptions.validations_errors.builders import build_validation_error
+
+if not rule(value):
+    raise build_validation_error(rule, value, value_name="age")
+```
+
+➡️ [README_BUILD_VALIDATION_ERROR.md](https://github.com/simplibs/simplibs-exception/blob/main/docs/exceptions/README_BUILD_VALIDATION_ERROR.md)
 
 ### `raise_with_location_offset`
 

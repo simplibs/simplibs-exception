@@ -51,7 +51,7 @@ def bool_or_exception(
         get_location += 1
 
     # 3. Lazy-load SimpleException inside the execution block to dismantle package circular dependencies
-    from ..SimpleException import SimpleException
+    from ..core.SimpleException import SimpleException
 
     # 4. Fire the structured exception down the execution stream
     raise SimpleException(

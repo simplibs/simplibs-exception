@@ -3,7 +3,7 @@ Tests for ModeBase — validation of the Template Method pattern, duck-typing co
 """
 import pytest
 
-from simplibs.exception._core_logic.internal_exceptions.SimpleExceptionModeError import (
+from simplibs.exception.core._helpers.internal_exceptions.SimpleExceptionModeError import (
     SimpleExceptionModeError,
 )
 from simplibs.exception.modes.base_class.ModeBase import ModeBase

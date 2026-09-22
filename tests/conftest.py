@@ -1,6 +1,6 @@
 import pytest
 
-from simplibs.exception.SimpleExceptionSettings import SimpleExceptionSettings
+from simplibs.exception.core.SimpleExceptionSettings import SimpleExceptionSettings
 
 
 @pytest.fixture(autouse=True)

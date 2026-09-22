@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] - 2026-09-23
+
+### ✨ Added
+
+* **Shared Exception Library**: Introduced a new `exceptions` package containing a categorized tree of
+  general-purpose exceptions (`SimpleError` as the root, plus `ValidationError`, `ParamError`,
+  `StateError`, `InitializationError`, `ConfigurationError`, `ResourceError`, `NotFoundError`,
+  `AlreadyExistsError`, `AccessError`, `OperationError`, `ConversionError`, `DependencyError`).
+  These are meant to be imported directly by any `simplibs` library instead of each library
+  redefining its own equivalent exception.
+* **`build_validation_error`**: New factory function under `exceptions.validations_errors.builders`
+  that builds a structured `ValidationError` for a failed user-supplied callable rule (lambda or
+  function), automatically extracting the callable's name into the diagnostic message.
+
+### 🔄 Changed
+
+* **`_SYSTEM_BLACKLIST`**: Broadened from `("<", "simplibs/exception")` to `("<", "simplibs/")`, so the
+  location scanner now automatically excludes the internals of every `simplibs` library from caller
+  detection, not just `simplibs-exception` itself. This applies both to the class default and to
+  `SimpleExceptionSettings.reset()`.
+
+---
+
 ## [1.0.2] - 2026-09-07
 
 ### 🐛 Fixed

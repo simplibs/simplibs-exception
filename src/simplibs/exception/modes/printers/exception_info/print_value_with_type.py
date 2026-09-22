@@ -37,7 +37,7 @@ def print_value_with_type(
 
     # 3. Fallback to global application configuration if local override is omitted
     if max_length is None:
-        from ....SimpleExceptionSettings import SimpleExceptionSettings as S
+        from ....core.SimpleExceptionSettings import SimpleExceptionSettings as S
         max_length = S.VALUE_TRUNCATION_LENGTH
 
     # 4. Truncation engine execution

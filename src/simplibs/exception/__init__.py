@@ -1,7 +1,7 @@
 # Core Classes
-from .SimpleException import SimpleException
-from .SimpleExceptionData import SimpleExceptionData
-from .SimpleExceptionSettings import SimpleExceptionSettings
+from .core.SimpleException import SimpleException
+from .core.SimpleExceptionData import SimpleExceptionData
+from .core.SimpleExceptionSettings import SimpleExceptionSettings
 
 # Rendering Modes
 from .modes import LOG, ONELINE, PRETTY, SIMPLE, ModeBase

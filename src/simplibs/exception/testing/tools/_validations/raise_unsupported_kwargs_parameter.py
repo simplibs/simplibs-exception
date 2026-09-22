@@ -1,6 +1,6 @@
 from typing import Any, NoReturn
 
-from ...._core_logic.internal_exceptions import SimpleExceptionSettingsError
+from ....core._helpers.internal_exceptions import SimpleExceptionSettingsError
 
 
 def raise_unsupported_kwargs_parameter(

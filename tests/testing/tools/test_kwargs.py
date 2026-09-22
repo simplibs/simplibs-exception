@@ -2,7 +2,7 @@
 Tests for Kwargs — initialization variants, mapping API integrity, and dictionary polymorphism.
 """
 import pytest
-from simplibs.exception._core_logic.internal_exceptions import SimpleExceptionSettingsError
+from simplibs.exception.core._helpers.internal_exceptions import SimpleExceptionSettingsError
 from simplibs.exception.testing.tools.Kwargs import Kwargs
 
 # -----------------------------------------------------------------------------

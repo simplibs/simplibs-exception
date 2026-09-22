@@ -2,7 +2,7 @@ from typing import Any
 
 from simplibs.sentinels import UNSET, UnsetType
 # Outers
-from ....SimpleExceptionData import SimpleExceptionData
+from ....core.SimpleExceptionData import SimpleExceptionData
 from ...tools import maybe_subtest
 
 

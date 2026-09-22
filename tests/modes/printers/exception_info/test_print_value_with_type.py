@@ -1,7 +1,7 @@
 import pytest
 
 from simplibs.sentinels import UNSET
-from simplibs.exception.SimpleExceptionSettings import SimpleExceptionSettings
+from simplibs.exception.core.SimpleExceptionSettings import SimpleExceptionSettings
 from simplibs.exception.modes.printers.exception_info.print_value_with_type import (
     print_value_with_type,
 )

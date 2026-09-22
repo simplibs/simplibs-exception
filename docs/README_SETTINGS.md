@@ -43,7 +43,7 @@ Below is the configuration registry class interface, followed by a detailed desc
 ```python
 class SimpleExceptionSettings:
     # --- System Blacklist (Read-Only) ---
-    _SYSTEM_BLACKLIST: tuple[str, ...] = ("<", "simplibs/exception")
+    _SYSTEM_BLACKLIST: tuple[str, ...] = ("<", "simplibs/")
 
     # --- Live Configuration Attributes ---
     GET_LOCATION: int | bool = 1
@@ -64,9 +64,9 @@ class SimpleExceptionSettings:
 | `MESSAGE_MODE`            | `ModeBase`        | `PRETTY`            | The default presentation mode used to format the final exception text output.                |
 | `VALUE_TRUNCATION_LENGTH` | `int`             | `70`                | The maximum allowed character length of an inspected runtime value (`value`) representation. |
 
-> **`_SYSTEM_BLACKLIST`** == ("<", "simplibs/exception")  
-> These patterns exclude Python internal frames and the `simplibs.exception`
-> implementation itself from automatic caller location detection.
+> **`_SYSTEM_BLACKLIST`** == ("<", "simplibs/")  
+> These patterns exclude Python internal frames and the internals of every
+> `simplibs` library from automatic caller location detection.
 
 ---
 
@@ -78,8 +78,8 @@ A system-protected tuple containing file patterns that are unconditionally skipp
 
 * Contains `"<"` to ignore Python's dynamic virtual stack frames 
 (e.g., `<string>`, `<lambda>`, `<frozen importlib>`).
-* Contains `"simplibs/exception"` to automatically filter out internal framework execution paths, 
-ensuring error outputs remain clean.
+* Contains `"simplibs/"` to automatically filter out internal execution paths of every `simplibs`
+library (not just this one), ensuring error outputs remain clean across the whole ecosystem.
 * *Note: This attribute is strictly read-only and is heavily protected against manual modification 
 or runtime overrides at the metaclass layer.*
 

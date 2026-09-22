@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 # Outers
-from ..._core_logic.internal_exceptions import SimpleExceptionModeError
+from ...core._helpers.internal_exceptions import SimpleExceptionModeError
 from ...protocols import SimpleExceptionDataProtocol
 
 

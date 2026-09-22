@@ -1,5 +1,5 @@
 import pytest
-from simplibs.exception.SimpleException import SimpleException
+from simplibs.exception.core.SimpleException import SimpleException
 from simplibs.exception.tools.bool_or_exception import bool_or_exception
 
 
