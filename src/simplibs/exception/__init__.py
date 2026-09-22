@@ -29,6 +29,8 @@ from .exceptions import (
     DependencyError,
 )
 
+# Exception builder
+from .exceptions.validations_errors.builders import build_validation_error
 
 __all__ = [
     # Core Infrastructure
@@ -67,6 +69,9 @@ __all__ = [
     "OperationError",
     "ConversionError",
     "DependencyError",
+
+    # Exception builder
+    "build_validation_error",
 ]
 
 _DESIGN_NOTES = """
@@ -106,11 +111,12 @@ statically testable applications without binding to runtime code abstractions:
 - `SimpleExceptionDataProtocol`: Defines access methods for reading underlying stored context states.
 - `ModeBaseProtocol`: Enforces interface validation when rolling custom rendering layers.
 
-### 5. Categorized Exception Hierarchy
+### 5. Categorized Exception Hierarchy & Builders
 Re-exports the complete set of standard, named domain exceptions (`SimpleError`, `ValidationError`, `ParamError`,
 `StateError`, `InitializationError`, `ConfigurationError`, `ResourceError`, `NotFoundError`, `AlreadyExistsError`,
-`AccessError`, `OperationError`, `ConversionError`, `DependencyError`) directly at the framework root. This allows
-consumers to handle or raise specialized errors without needing to navigate sub-package import paths.
+`AccessError`, `OperationError`, `ConversionError`, `DependencyError`) together with factory builders (`build_validation_error`)
+directly at the framework root. This allows consumers to build, handle, or raise specialized errors without needing 
+to navigate sub-package import paths.
 
 ## Architecture Guidelines
 By leveraging selective double-entry proxy definitions through internal sub-package `__all__` arrays, 

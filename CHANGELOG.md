@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.2] - 2026-09-23
+
+### ✨ Added
+
+* **Re-exported Builder Utility**: Direct re-export of `build_validation_error` 
+  in the top-level package namespace (`simplibs.exception`), allowing rule validation 
+  builders to be accessed directly alongside exception classes.
+
+---
+
 ## [1.1.1] - 2026-09-23
 
 ### 🔄 Changed
