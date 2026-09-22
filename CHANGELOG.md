@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.1] - 2026-09-23
+
+### 🔄 Changed
+
+* **Top-Level Exception Re-exports**: Updated the root `__init__.py` to re-export the 
+  entire set of categorized domain exceptions (`SimpleError`, `ValidationError`, 
+  `ParamError`, `StateError`, `InitializationError`, `ConfigurationError`, `ResourceError`, 
+  `NotFoundError`, `AlreadyExistsError`, `AccessError`, `OperationError`, `ConversionError`, 
+  `DependencyError`).
+* **Flat API Consistency**: Standardized the public export contract (`__all__`) 
+  at both the root level and the `simplibs.exception` package level, allowing consumers 
+  to import standard exceptions directly from the framework root without requiring 
+  internal sub-module paths.
+
+---
+
 ## [1.1.0] - 2026-09-23
 
 ### ✨ Added

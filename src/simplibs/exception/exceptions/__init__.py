@@ -38,6 +38,22 @@ Central, importable collection of every named, categorized exception in the `sim
 ecosystem. Every simplibs library that needs a general-purpose exception (parameter validation,
 state, resource, ...) imports it from here instead of redefining an equivalent one locally.
 
+## Public API Export Strategy
+
+* **Top-Level Re-exports:**
+  Re-exports all standard, non-domain exception classes (`SimpleError`, `ValidationError`,
+  `ParamError`, `StateError`, `InitializationError`, `ConfigurationError`, `ResourceError`,
+  `NotFoundError`, `AlreadyExistsError`, `AccessError`, `OperationError`, `ConversionError`,
+  `DependencyError`) directly at the package root level.
+* **Single Source of Import:**
+  Consumers and internal packages can import all common exception types directly from
+  `simplibs.exception` (e.g. `from simplibs.exception import ValidationError, ParamError`)
+  without needing to navigate internal directory structures or sub-modules like
+  `simplibs.exception.validations_errors.ValidationError`.
+* **Explicit Exclusions:**
+  Builders/factories (e.g. from sub-packages' `builders` modules) are deliberately excluded
+  from top-level re-exports to keep the main namespace clean and focused exclusively on exception types.
+  
 ## Consolidated Architecture Mapping
 
 | Category                    | Description                                                                          |

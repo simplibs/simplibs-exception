@@ -12,6 +12,24 @@ from .protocols import ModeBaseProtocol, SimpleExceptionDataProtocol, SimpleExce
 # Developer Tools
 from .tools import bool_or_exception, raise_location_offset, raise_with_location_offset
 
+# Exceptions
+from .exceptions import (
+    SimpleError,
+    ValidationError,
+    ParamError,
+    StateError,
+    InitializationError,
+    ConfigurationError,
+    ResourceError,
+    NotFoundError,
+    AlreadyExistsError,
+    AccessError,
+    OperationError,
+    ConversionError,
+    DependencyError,
+)
+
+
 __all__ = [
     # Core Infrastructure
     "SimpleException",
@@ -34,6 +52,21 @@ __all__ = [
     "SimpleExceptionProtocol",
     "SimpleExceptionDataProtocol",
     "ModeBaseProtocol",
+
+    # Exceptions
+    "SimpleError",
+    "ValidationError",
+    "ParamError",
+    "StateError",
+    "InitializationError",
+    "ConfigurationError",
+    "ResourceError",
+    "NotFoundError",
+    "AlreadyExistsError",
+    "AccessError",
+    "OperationError",
+    "ConversionError",
+    "DependencyError",
 ]
 
 _DESIGN_NOTES = """
@@ -72,6 +105,12 @@ statically testable applications without binding to runtime code abstractions:
 - `SimpleExceptionProtocol`: The strict structural type contract of the primary exception object.
 - `SimpleExceptionDataProtocol`: Defines access methods for reading underlying stored context states.
 - `ModeBaseProtocol`: Enforces interface validation when rolling custom rendering layers.
+
+### 5. Categorized Exception Hierarchy
+Re-exports the complete set of standard, named domain exceptions (`SimpleError`, `ValidationError`, `ParamError`,
+`StateError`, `InitializationError`, `ConfigurationError`, `ResourceError`, `NotFoundError`, `AlreadyExistsError`,
+`AccessError`, `OperationError`, `ConversionError`, `DependencyError`) directly at the framework root. This allows
+consumers to handle or raise specialized errors without needing to navigate sub-package import paths.
 
 ## Architecture Guidelines
 By leveraging selective double-entry proxy definitions through internal sub-package `__all__` arrays, 
