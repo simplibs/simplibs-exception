@@ -3,7 +3,7 @@ from simplibs.sentinels import UNSET, UnsetType
 # Outers
 from ...tools import maybe_subtest
 # Inners
-from ._utils import compare_strings
+from ._utils import compare_strings, compare_values
 
 
 def assert_exception_fields(
@@ -75,7 +75,7 @@ def assert_exception_fields(
 
     if value is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_value", verbose=verbose):
-            assert value == exc.value
+            compare_values(value, exc.value)
 
     if problem is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_problem", verbose=verbose):

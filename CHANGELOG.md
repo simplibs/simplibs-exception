@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.3] - 2026-09-24
+
+### ✨ Added
+
+* **`compare_values` Assertion Utility**: Introduced a generic value comparison 
+  engine (`simplibs.exception.testing.asserts.fields._utils.compare_values`) 
+  featuring explicit IEEE 754 NaN handling (`float('nan') == float('nan')`). 
+  Integrated into `assert_exception_fields` to ensure deterministic validation 
+  of exact exception payloads (`exc.value`).
+
+---
+
 ## [1.1.2] - 2026-09-23
 
 ### ✨ Added

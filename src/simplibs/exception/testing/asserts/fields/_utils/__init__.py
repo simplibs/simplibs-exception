@@ -1,5 +1,6 @@
-from .compare_strings import compare_strings
 from ._normalize_value import _normalize_value
+from .compare_strings import compare_strings
+from .compare_values import compare_values
 
 _DESIGN_NOTES = """
 # Asserts Fields Sub-Engine Utilities Registry
@@ -14,7 +15,8 @@ textual inspection logic, ensuring the public assertion API remains clean and fo
 | Component          | Type                 | Description                                                 |
 | :----------------- | :------------------- | :---------------------------------------------------------- |
 | `compare_strings`  | Inspection Engine    | Multi-modal textual evaluation engine (Exact/Prefix/Fuzzy). |
-| `_normalize_value`  | Sanitization Utility | Data flattening and type-coercion gate for textual inputs.   |
+| `compare_values`   | Inspection Engine    | Generic value comparator with IEEE 754 NaN safety.           |
+| `_normalize_value` | Sanitization Utility | Data flattening and type-coercion gate for textual inputs.   |
 
 ## Access Restriction
 These utilities are intended strictly for internal usage within `simplibs.exception.testing.asserts.fields`. 
