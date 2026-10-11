@@ -84,10 +84,14 @@ class SimpleException(SimpleExceptionData, Exception):
     ) -> "SimpleExceptionProtocol":
         """
         Dynamically injects a foreign exception type into the class ancestors (MRO) if provided.
+
+        The allocator is looked up in the MRO of the resolved (possibly dynamic) class, not of
+        the original `cls`, so foreign types with their own C layout (e.g. OSError family)
+        are allocated by their native `__new__`.
         """
         resolved_cls = add_exception_type(cls, exception)
         # noinspection PyTypeChecker
-        return super().__new__(resolved_cls)
+        return super(SimpleException, resolved_cls).__new__(resolved_cls)
 
     def __init_subclass__(
         cls,
@@ -147,6 +151,18 @@ and text output generation.
 3. **MRO Intercept Bypass**: Dataclasses automatically generate an `__init__` that resets fields. `SimpleException.__init__` 
    explicitly overrides this, normalizes properties via `init_utils`, and bypasses dataclass initialization by 
    directly invoking `Exception.__init__(self, self.rendered_message)`.
+
+## Allocation via the Resolved Class (`__new__`)
+`__new__` looks up the next allocator with `super(SimpleException, resolved_cls)`, not with the
+zero-argument `super()`. The zero-argument form searches the MRO of the original `cls`, where the
+injected foreign type is not present, and ends up at `Exception.__new__`. For types sharing the
+plain `BaseException` layout (`ValueError`, `KeyError`, ...) that is harmless. For types with their
+own C layout (`OSError`, `FileNotFoundError`, `PermissionError`, ...) CPython rejects it with
+"Exception.__new__(X) is not safe, use OSError.__new__()". Searching the MRO of `resolved_cls`
+selects the allocator that matches the layout of the instance actually being created.
+Without an injected type (`resolved_cls is cls`) the behaviour is identical to before.
+Note: `errno`, `strerror` and `filename` stay `None` — the constructor is `SimpleException.__init__`,
+not `OSError.__init__`.
 
 ## Environment Magic Hooks
 - **`__str__`**: Controls the text stream interface. It maps directly to `self.rendered_message`, causing terminals, 

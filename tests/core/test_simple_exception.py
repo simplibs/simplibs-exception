@@ -53,3 +53,54 @@ def test_init_subclass_valid_overrides():
         error_name: str = "GOOD_ERROR"
 
     assert GoodSubclass.error_name == "GOOD_ERROR"
+
+
+FOREIGN_EXCEPTIONS = [
+    ValueError,
+    KeyError,
+    TypeError,
+    StopIteration,
+    UnicodeDecodeError,
+    OSError,
+    FileNotFoundError,
+    NotADirectoryError,
+    PermissionError,
+]
+
+
+@pytest.mark.parametrize("exc_type", FOREIGN_EXCEPTIONS)
+def test_foreign_exception_is_catchable_as_native_type(exc_type):
+    """Verifies except/isinstance compatibility, including types with their own C layout (OSError family)."""
+    with pytest.raises(exc_type) as info:
+        raise SimpleException("boom", label="x", exception=exc_type)
+
+    assert isinstance(info.value, SimpleException)
+    assert isinstance(info.value, exc_type)
+    assert "boom" in str(info.value)
+
+
+@pytest.mark.parametrize("exc_type", [ValueError, PermissionError])
+def test_foreign_exception_instance_is_flattened_to_its_type(exc_type):
+    """Verifies that passing an exception instance behaves like passing its class."""
+    err = SimpleException("boom", label="x", exception=exc_type("original"))
+    assert isinstance(err, exc_type)
+
+
+def test_foreign_exception_from_class_attribute():
+    """Verifies the class-level default `exception` is used for allocation when not passed explicitly."""
+
+    class DeniedError(SimpleException):
+        exception = PermissionError
+
+    with pytest.raises(PermissionError):
+        raise DeniedError("boom", label="x")
+
+
+@pytest.mark.parametrize("exc_type", [ValueError, NotADirectoryError])
+def test_with_location_offset_preserves_foreign_exception_type(exc_type):
+    """Verifies that the cloned exception is still an instance of the injected foreign type."""
+    err = SimpleException("boom", label="x", exception=exc_type)
+    new_err = err.with_location_offset()
+
+    assert new_err is not err
+    assert isinstance(new_err, exc_type)

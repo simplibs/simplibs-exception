@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.4] - 2026-10-11
+
+### 🐛 Fixed
+
+* **Dynamic MRO Injection of `OSError` Family**: Raising a `SimpleException` (or any subclass)
+  with `exception=` set to a type with its own C-level layout (`OSError`, `FileNotFoundError`,
+  `NotADirectoryError`, `PermissionError`, ...) failed with
+  `TypeError: Exception.__new__(X) is not safe, use OSError.__new__()`.
+  `SimpleException.__new__` now looks up the allocator in the MRO of the resolved dynamic class
+  (`super(SimpleException, resolved_cls)`) instead of the original class. Behaviour for exceptions
+  without an injected type, and for types sharing the plain `BaseException` layout
+  (`ValueError`, `KeyError`, ...), is unchanged.
+
+### 📋 Improved
+
+* **Test Coverage**: Added a parametrized matrix test verifying `except` / `isinstance()`
+  compatibility for foreign exception types, instance flattening, class-level `exception`
+  defaults and `with_location_offset()` cloning.
+
+### ℹ️ Notes
+
+* For injected `OSError`-family types, `errno`, `strerror` and `filename` remain `None`,
+  because initialization is handled by `SimpleException.__init__`.
+
+---
+
 ## [1.1.3] - 2026-09-24
 
 ### ✨ Added

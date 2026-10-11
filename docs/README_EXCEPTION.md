@@ -114,6 +114,11 @@ and the foreign exception class.
 Spawning runtime types is computationally expensive. To eliminate CPU overhead, the engine caches 
 these dynamic classes inside a private dictionary cache (`_dynamic_cls_cache`) in settings. 
 Subsequent instantiation of identical MRO combinations resolves instantly.
+5. **Allocation via the Resolved Class:** 
+The instance is allocated with `super(SimpleException, resolved_cls).__new__(resolved_cls)`, 
+so the allocator is looked up in the MRO of the dynamic hybrid class. This is what allows 
+foreign types with their own C-level layout (`OSError`, `FileNotFoundError`, `PermissionError`, ...) 
+to be injected just like `ValueError`.
 
 ```python
 try:
@@ -128,6 +133,17 @@ except ValueError:
     # This block successfully intercepts our SimpleException!
     # Python's native isinstance(error, ValueError) evaluates to True.
 ```
+
+```python
+try:
+    raise SimpleException("Access denied", exception=PermissionError)
+except PermissionError:
+    ...  # Caught — isinstance(error, PermissionError) is True
+```
+
+> ℹ️ **Note on `OSError` family:** only `except` / `isinstance()` compatibility is guaranteed.
+> The attributes `errno`, `strerror` and `filename` remain `None`, because the instance is initialized
+> by `SimpleException.__init__`, not by `OSError.__init__`.
 
 [🔼 Back to Top](#-simpleexception)
 
