@@ -30,7 +30,9 @@ def assert_function_callable(
         name=f"{intro}test_callable",
         verbose=verbose,
     ):
-        assert callable(func)
+        assert callable(func), (
+            f"Expected a callable, got {type(func).__name__}: {func!r}."
+        )
 
     return func
 
@@ -39,13 +41,13 @@ _DESIGN_NOTES = """
 # assert_function_callable (Operational Interface Gate)
 
 ## Purpose
-Acts as the immediate runtime validation gate for function-driven test pipelines. It ensures that 
-any target passed into the testing macros matches Python's execution requirements before internal 
+Acts as the immediate runtime validation gate for function-driven test pipelines. It ensures that
+any target passed into the testing macros matches Python's execution requirements before internal
 parameter normalizers and invocation engines attempt execution.
 
 ## Pipeline Lifecycle Role
-This routine serves as a Fail-Fast sentinel within composite runners such as `assert_exception_function`. 
-By throwing a strict assertion error early if a non-callable object (e.g., an accidental raw string, 
-integer, or incorrectly typed configuration token) is provided, it prevents unhandled internal 
+This routine serves as a Fail-Fast sentinel within composite runners such as `assert_exception_function`.
+By throwing a strict assertion error early if a non-callable object (e.g., an accidental raw string,
+integer, or incorrectly typed configuration token) is provided, it prevents unhandled internal
 `TypeError: '...' object is not callable` crashes, ensuring diagnostic reports remain clear and precise.
 """

@@ -112,24 +112,24 @@ _DESIGN_NOTES = """
 # FuncCase (Declarative Functional Test Scenario Blueprint)
 
 ## Architectural Purpose
-`FuncCase` acts as a specialized data schema wrapper for functional boundary testing, 
-pairing an anonymous executable routine (`func`) with a comprehensive block of concrete 
+`FuncCase` acts as a specialized data schema wrapper for functional boundary testing,
+pairing an anonymous executable routine (`func`) with a comprehensive block of concrete
 diagnostic expectations.
 
 ## Comparison Modalities (Opt-in Architecture)
-The test engine defaults to substring inclusion (`in` operator), providing the most resilient 
+The test engine defaults to substring inclusion (`in` operator), providing the most resilient
 audit for dynamic error messages. Stricter validation modes require explicit opt-in:
 - **`exact_match=True`**: Full string equality.
 - **`startswith=True`**: Prefix validation.
 
 ## Tactical Domain Selection
-- **Exception Classes:** Do **not** use `FuncCase`. 
-- **Functions & Logic Gates:** Natively wrapped via `FuncCase` whenever deep telemetry 
+- **Exception Classes:** Do **not** use `FuncCase`.
+- **Functions & Logic Gates:** Natively wrapped via `FuncCase` whenever deep telemetry
   property validation is required.
 
 ## Matrix Orchestration Compatibility
-`FuncCase` serves as a premium object format within `generate_bulk_tests`. This allows 
-developers to construct visual and readable test batteries where structural class audits 
-and intricate multi-point logic verifications sit side-by-side inside a single master 
+`FuncCase` serves as a premium object format within `exceptions_bulk_test`. This allows
+developers to construct visual and readable test batteries where structural class audits
+and intricate multi-point logic verifications sit side-by-side inside a single master
 collection layout.
 """

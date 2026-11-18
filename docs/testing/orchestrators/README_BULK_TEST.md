@@ -43,6 +43,10 @@ defaults, and interface evaluations.
 2. **Inline Functional Sequence** (`tuple(ExceptionClass, Callable, *Parameters)`)
 A compact layout representing quick failure boundaries. Routed to `assert_exception_function` 
 with deep field assertions disabled.
+Without parameters, `(ExceptionClass, func)`, the function is called with no arguments; a trailing `Kwargs`
+is expanded into keyword arguments (a plain `dict` is a positional value). A tuple item always runs with
+`deep_check=False`: the `deep_check` of the bulk test applies to naked exception classes and to `FuncCase`.
+The callable needs no `__name__` (a `partial` or an instance is named by its type).
 3. **Complex Test Scenario** (`FuncCase`)
 A declarative configuration container. Triggers complete compliance verification 
 across all populated dynamic telemetry fields.

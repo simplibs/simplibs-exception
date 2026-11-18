@@ -54,6 +54,8 @@ This assertion verifies:
 * That invoking the function with invalid parameters successfully triggers an exception.
 * That the raised exception matches the specified `exception_type` contract (if provided).
 * That the exception is safely intercepted using a native `pytest.raises` guard.
+* That a call raising nothing is reported at once by a clear `[Framework Guard]` message naming the called
+arguments (with `verbose=True` the failed subtest is recorded first).
 * That the caught exception instance is returned to the caller, 
 allowing downstream field verification (fluid API).
 

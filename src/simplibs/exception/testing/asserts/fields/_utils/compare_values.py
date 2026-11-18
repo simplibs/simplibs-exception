@@ -5,6 +5,8 @@ from typing import Any
 def compare_values(
     test_value: Any,
     exc_value: Any,
+    *,
+    field: str = "value",
 ) -> None:
     """Compare target exception value attributes with IEEE 754 NaN safety.
 
@@ -15,6 +17,7 @@ def compare_values(
     Args:
         test_value: The expected value or payload to verify.
         exc_value: The actual value retrieved from the exception instance.
+        field: Name of the compared field, used only in the failure message.
 
     Raises:
         AssertionError: If test_value does not equal exc_value and they are not both NaN.
@@ -29,27 +32,29 @@ def compare_values(
         return
 
     # 2. Standard Value Equality Evaluation
-    assert test_value == exc_value
+    assert test_value == exc_value, (
+        f"Expected {field} to equal {test_value!r}, got {exc_value!r}."
+    )
 
 
 _DESIGN_NOTES = """
 # compare_values (Value Inspector Helper)
 
 ## Purpose
-An internal assertion engine specialized in verifying generic data values and payloads 
-captured within exception telemetry (such as `exc.value`). It provides exact equality 
+An internal assertion engine specialized in verifying generic data values and payloads
+captured within exception telemetry (such as `exc.value`). It provides exact equality
 verification while resolving edge-case failures inherent to Python's handling of special numeric types.
 
 ## The IEEE 754 NaN Neutralization Strategy
-In standard Python and IEEE 754 specs, `float("nan") == float("nan")` evaluates strictly to `False`. 
-When testing valid/invalid contract boundary batteries with NaN values, standard `assert test_value == exc_value` 
+In standard Python and IEEE 754 specs, `float("nan") == float("nan")` evaluates strictly to `False`.
+When testing valid/invalid contract boundary batteries with NaN values, standard `assert test_value == exc_value`
 fails even when the exception correctly captured the exact input object.
 
-This engine introduces an explicit type and state check (`isinstance` + `math.isnan`). If both sides 
+This engine introduces an explicit type and state check (`isinstance` + `math.isnan`). If both sides
 are confirmed NaN floats, the comparison passes safely before reaching the standard equality gate.
 
 ## Operational Scope
-Unlike `compare_strings`, this engine does not perform normalization, substring matching, or prefix 
-evaluations. It enforces exact identity/equality semantics across standard data types (ints, floats, 
+Unlike `compare_strings`, this engine does not perform normalization, substring matching, or prefix
+evaluations. It enforces exact identity/equality semantics across standard data types (ints, floats,
 objects, collections, custom types) with NaN immunity.
 """

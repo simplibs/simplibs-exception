@@ -34,7 +34,7 @@ def assert_function_raises(
         subtests: The native pytest subtests fixture manager instance.
         func: The target function or callable under test.
         invalid_params: The explicit parameter payload (tuple or Kwargs) designed
-            To trigger an execution failure.
+            to trigger an execution failure.
         exception_type: Expected exception class or a tuple of valid exception classes.
             If UNSET, any exception deriving from BaseException satisfies the check.
         verbose: Enables isolated pytest subtest logging layout tracking.
@@ -47,6 +47,7 @@ def assert_function_raises(
     args, kwargs = process_params(invalid_params)
 
     # 1. Verify that the function boundary execution successfully forces an exception drop
+    caught: BaseException | None = None
     with maybe_subtest(
         subtests,
         name=f"{intro}test_raises_exception",
@@ -54,16 +55,25 @@ def assert_function_raises(
     ):
         with pytest.raises(BaseException) as exc_info:
             func(*args, **kwargs)
+        caught = exc_info.value
 
-    # Safely extract the literal exception instance captured by the pytest engine
-    exc = exc_info.value
+    # Framework Guard: in verbose mode a failed subtest does not stop the test, but without an
+    # exception there is nothing to inspect or to return. Stop here with a clear message
+    # instead of a confusing error from `exc_info.value` on an empty context.
+    if caught is None:
+        pytest.fail(
+            f"\n[Framework Guard] Target function did not raise any exception!\n"
+            f"Called with args={args!r}, kwargs={kwargs!r}.\n\n"
+            f"💡 Tip: If the call was meant to fail, check that the invalid payload really is invalid "
+            f"and that it is wrapped as invalid_params=(value,) or a Kwargs instance."
+        )
+    exc = caught
 
     # 2. Verify that the triggered exception matches the specific expected type mapping
     if exception_type is not UNSET:
         # Framework Guard: If the raised error type is fundamentally unexpected (e.g., a native TypeError
         # caused by bad signature mapping), we must issue a hard-fail immediately. Continuing into
         # downstream telemetry checks would trigger misleading AttributeError chains on the native error object.
-        exception_type: type[BaseException] | tuple[type[BaseException], ...]
         if not isinstance(exc, exception_type):
             expected_names = (
                 exception_type.__name__
@@ -85,8 +95,9 @@ def assert_function_raises(
             name=f"{intro}test_exception_type",
             verbose=verbose,
         ):
-            exception_type: type[BaseException] | tuple[type[BaseException], ...]
-            assert isinstance(exc, exception_type)
+            assert isinstance(exc, exception_type), (
+                f"Expected an exception of type {exception_type!r}, got {type(exc).__name__}."
+            )
 
     return exc
 
@@ -95,24 +106,25 @@ _DESIGN_NOTES = """
 # assert_function_raises (Negative Boundary Assertion Blade)
 
 ## Purpose
-An automated validation utility for negative functional constraints. It wraps parameter normalization, 
+An automated validation utility for negative functional constraints. It wraps parameter normalization,
 guaranteed exception interception, and strict type verification into a clean, reusable interface.
 
 ## Execution Sequencing & Exception Capture
-1. **Parameter Unpacking Layer:** Leverages `process_params` to seamlessly transform explicit argument 
+1. **Parameter Unpacking Layer:** Leverages `process_params` to seamlessly transform explicit argument
    tuples or standalone `Kwargs` configurations into strict runtime `*args` and `**kwargs`.
-2. **Interception Guard (`pytest.raises`):** Forces the core execution block inside a master 
-   Python `BaseException` net. Because this guard is nested directly inside the bi-modal 
+2. **Interception Guard (`pytest.raises`):** Forces the core execution block inside a master
+   Python `BaseException` net. Because this guard is nested directly inside the bi-modal
    `maybe_subtest` engine, it handles failure state analysis consistently across both verbose and fast-pass CI lanes.
-3. **Framework Guard & Type Blueprint Matching:** Extracts the underlying instance (`exc_info.value`) 
-   An performs a pre-flight lineage validation. If the caught error diverges from `exception_type`, 
-   The engine actively aborts execution using `pytest.fail`. This hard stop prevents cascading, 
-   Unreadable `AttributeError` exceptions from running inside subsequent field-telemetry blocks 
-   When a function unexpectedly throws standard runtime signature errors (e.g., a native `TypeError` 
-   Due to parameter mismatch).
-
+3. **Framework Guard & Type Blueprint Matching:** Extracts the underlying instance (`exc_info.value`)
+   and performs a pre-flight lineage validation. If the caught error diverges from `exception_type`,
+   the engine aborts execution using `pytest.fail`. This hard stop prevents cascading, unreadable
+   `AttributeError` exceptions from running inside subsequent field-telemetry blocks when a function
+   unexpectedly throws a standard runtime error (e.g., a native `TypeError` due to a parameter mismatch).
+4. **No Exception At All:** In verbose mode a failed subtest does not stop the test, so the missing
+   exception is caught explicitly (`caught is None`) and reported by `pytest.fail` with the called
+   arguments, instead of failing later on an empty `pytest.raises` context.
 ## Downstream Fluid Interface Design
-By returning the raw caught `BaseException` instance, this function acts as an ideal conduit for 
-fluid assertions. The output can be piped directly into telemetry inspection blades (such as `assert_exception_fields`), 
+By returning the raw caught `BaseException` instance, this function acts as an ideal conduit for
+fluid assertions. The output can be piped directly into telemetry inspection blades (such as `assert_exception_fields`),
 enabling developers to validate deep error messages, codes, or dynamic hints raised from deep within the functional context.
 """

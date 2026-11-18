@@ -39,7 +39,9 @@ def assert_class_inheritance(
         name=f"{intro}{subintro}test_base_exception_inheritance",
         verbose=verbose,
     ):
-        assert issubclass(exc_class, BaseException)
+        assert isinstance(exc_class, type) and issubclass(exc_class, BaseException), (
+            f"Expected an exception class derived from BaseException, got {exc_class!r}."
+        )
 
     # 2. Verify that the target incorporates the core framework data layout layer
     with maybe_subtest(
@@ -47,7 +49,9 @@ def assert_class_inheritance(
         name=f"{intro}{subintro}test_simple_exception_data_inheritance",
         verbose=verbose,
     ):
-        assert issubclass(exc_class, SimpleExceptionData)
+        assert isinstance(exc_class, type) and issubclass(exc_class, SimpleExceptionData), (
+            f"Expected {getattr(exc_class, '__name__', exc_class)!r} to derive from SimpleExceptionData."
+        )
 
     # 3. Verify customized polymorphic architectural constraints if provided
     if expected_parents is not UNSET:
@@ -57,7 +61,9 @@ def assert_class_inheritance(
             verbose=verbose,
         ):
             # noinspection PyTypeChecker
-            assert issubclass(exc_class, expected_parents)
+            assert isinstance(exc_class, type) and issubclass(exc_class, expected_parents), (
+                f"Expected {getattr(exc_class, '__name__', exc_class)!r} to derive from {expected_parents!r}."
+            )
 
     return exc_class
 
@@ -66,23 +72,23 @@ _DESIGN_NOTES = """
 # assert_class_inheritance (Structural Hierarchy Gate)
 
 ## Purpose
-Enforces the mandatory architectural multi-inheritance matrix required by custom framework errors. 
-It ensures that compliance checks fail early (Fail-Fast) if a developer declares a custom exception 
+Enforces the mandatory architectural multi-inheritance matrix required by custom framework errors.
+It ensures that compliance checks fail early (Fail-Fast) if a developer declares a custom exception
 but forgets to bind it to the necessary base building blocks.
 
 ## Verification Matrix
-1. **`BaseException` Alignment:** Guarantees the class is natively recognized by Python's runtime 
+1. **`BaseException` Alignment:** Guarantees the class is natively recognized by Python's runtime
    interpreter as an escapable error blueprint that can be triggered via `raise`.
-2. **`SimpleExceptionData` Alignment:** Guarantees that the target implements the comprehensive framework 
+2. **`SimpleExceptionData` Alignment:** Guarantees that the target implements the comprehensive framework
    telemetry state manager, metadata trackers, and properties formatting machinery.
-3. **`expected_parents` Compliance (Dynamic Pass):** Evaluates specialized custom polymorphism constraints. 
-   By providing a class or tuple of classes, developers can verify that deep architectural error branches 
-   (e.g., `SimpleExceptionSettingsError`) remain safely matchable by their abstract parent groups 
+3. **`expected_parents` Compliance (Dynamic Pass):** Evaluates specialized custom polymorphism constraints.
+   By providing a class or tuple of classes, developers can verify that deep architectural error branches
+   (e.g., `SimpleExceptionSettingsError`) remain safely matchable by their abstract parent groups
    (e.g., `SimpleExceptionInternalError`).
 
 ## Pipeline Lifecycle Role
-This routine serves as the entry-level sentinel within the composite `assert_exception_class` loop. 
-By verifying the underlying type contract upfront, it guarantees that downstream layout inspections 
-(which rely on introspection and reflection fields) can execute without throwing unpredictable, 
+This routine serves as the entry-level sentinel within the composite `assert_exception_class` loop.
+By verifying the underlying type contract upfront, it guarantees that downstream layout inspections
+(which rely on introspection and reflection fields) can execute without throwing unpredictable,
 low-level attribute crashes.
 """

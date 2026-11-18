@@ -30,82 +30,88 @@ def assert_exception_fields(
 ) -> Any:
     """Assert that an exception instance contains the expected field values.
 
-        Compares selected exception attributes against the expected values provided
-        to this function. Only parameters that are not UNSET are validated.
+    Compares selected exception attributes against the expected values provided
+    to this function. Only parameters that are not UNSET are validated.
 
-        Args:
-            subtests: The native pytest subtests fixture manager instance.
-            exc: The exception instance to validate.
-            error_name: Expected value of ``exc.error_name``.
-            label: Expected value of ``exc.label``.
-            message: Expected value of ``exc.message``.
-            expected: Expected value of ``exc.expected``.
-            value: Expected value of ``exc.value``.
-            problem: Expected value of ``exc.problem``.
-            context: Expected value of ``exc.context``.
-            how_to_fix: Expected value of ``exc.how_to_fix``.
-            exception: Expected value of ``exc.exception``.
-            get_location: Expected value of ``exc.get_location``.
-            skip_locations: Expected value of ``exc.skip_locations``.
-            oneline: Expected value of ``exc.oneline``.
-            exact_match: If True, performs strict equality comparison.
-            startswith: If True, validates that the actual value starts with the expected value.
-            verbose: Enables pytest subtests for individual field checks.
-            intro: Optional prefix for generated subtest names.
+    Args:
+        subtests: The native pytest subtests fixture manager instance.
+        exc: The exception instance to validate.
+        error_name: Expected value of ``exc.error_name``.
+        label: Expected value of ``exc.label``.
+        message: Expected value of ``exc.message``.
+        expected: Expected value of ``exc.expected``.
+        value: Expected value of ``exc.value``.
+        problem: Expected value of ``exc.problem``.
+        context: Expected value of ``exc.context``.
+        how_to_fix: Expected value of ``exc.how_to_fix``.
+        exception: Expected value of ``exc.exception``.
+        get_location: Expected value of ``exc.get_location``.
+        skip_locations: Expected value of ``exc.skip_locations``.
+        oneline: Expected value of ``exc.oneline``.
+        exact_match: If True, performs strict equality comparison.
+        startswith: If True, validates that the actual value starts with the expected value.
+        verbose: Enables pytest subtests for individual field checks.
+        intro: Optional prefix for generated subtest names.
 
-        Returns:
-            The validated exception instance.
-        """
+    Returns:
+        The validated exception instance.
+    """
 
     if error_name is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_error_name", verbose=verbose):
-            compare_strings(error_name, exc.error_name, exact_match=exact_match, startswith=startswith)
+            compare_strings(error_name, exc.error_name, exact_match=exact_match, startswith=startswith, field="error_name")
 
     if label is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_label", verbose=verbose):
-            compare_strings(label, exc.label, exact_match=exact_match, startswith=startswith)
+            compare_strings(label, exc.label, exact_match=exact_match, startswith=startswith, field="label")
 
     if message is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_message", verbose=verbose):
-            compare_strings(message, exc.message, exact_match=exact_match, startswith=startswith)
+            compare_strings(message, exc.message, exact_match=exact_match, startswith=startswith, field="message")
 
     if expected is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_expected", verbose=verbose):
-            compare_strings(expected, exc.expected, exact_match=exact_match, startswith=startswith)
+            compare_strings(expected, exc.expected, exact_match=exact_match, startswith=startswith, field="expected")
 
     if value is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_value", verbose=verbose):
-            compare_values(value, exc.value)
+            compare_values(value, exc.value, field="value")
 
     if problem is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_problem", verbose=verbose):
-            compare_strings(problem, exc.problem, exact_match=exact_match, startswith=startswith)
+            compare_strings(problem, exc.problem, exact_match=exact_match, startswith=startswith, field="problem")
 
     if context is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_context", verbose=verbose):
-            compare_strings(context, exc.context, exact_match=exact_match, startswith=startswith)
+            compare_strings(context, exc.context, exact_match=exact_match, startswith=startswith, field="context")
 
     if how_to_fix is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_how_to_fix", verbose=verbose):
-            compare_strings(how_to_fix, exc.how_to_fix, exact_match=exact_match, startswith=startswith)
+            compare_strings(how_to_fix, exc.how_to_fix, exact_match=exact_match, startswith=startswith, field="how_to_fix")
 
     if exception is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_exception", verbose=verbose):
-            assert exception == exc.exception
+            assert exception == exc.exception, (
+                f"Expected exception to equal {exception!r}, got {exc.exception!r}."
+            )
 
     if get_location is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_get_location", verbose=verbose):
-            assert get_location == exc.get_location
+            assert get_location == exc.get_location, (
+                f"Expected get_location to equal {get_location!r}, got {exc.get_location!r}."
+            )
 
     if skip_locations is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_skip_locations", verbose=verbose):
             actual = exc.skip_locations
-            expected = skip_locations if isinstance(skip_locations, tuple) else (skip_locations,)
-            assert tuple(actual[:len(expected)]) == expected
+            expected_prefix = skip_locations if isinstance(skip_locations, tuple) else (skip_locations,)
+            assert tuple(actual[:len(expected_prefix)]) == expected_prefix, (
+                f"Expected skip_locations to start with {expected_prefix!r}, got {tuple(actual)!r}."
+            )
 
     if oneline is not UNSET:
         with maybe_subtest(subtests, name=f"{intro}test_oneline", verbose=verbose):
-            assert oneline == exc.oneline
+            assert oneline == exc.oneline, f"Expected oneline to equal {oneline!r}, got {exc.oneline!r}."
 
     return exc
 
@@ -114,8 +120,8 @@ _DESIGN_NOTES = """
 # assert_exception_fields (Granular Telemetry Assertion Blade)
 
 ## Purpose
-Acts as the dedicated, single-responsibility telemetry validator for instantiated exception instances. 
-The flat execution structure ensures immediate visual parity across all property checks, 
+Acts as the dedicated, single-responsibility telemetry validator for instantiated exception instances.
+The flat execution structure ensures immediate visual parity across all property checks,
 facilitating rapid diagnostic auditing.
 
 ## Operational Modalities
@@ -130,26 +136,27 @@ The engine routes string-based attributes through a multi-modal comparator suppo
 - **Substring Inclusion:** Default fuzzy-match logic.
 
 ## Sentinel Protection Design
-Defaults to `UNSET` to allow selective validation. This explicitly distinguishes between 
+Defaults to `UNSET` to allow selective validation. This explicitly distinguishes between
 skipping an evaluation (`UNSET`) and asserting an explicit empty state (`None`/`""`).
 
 ## Composite Field Handling: `skip_locations`
-The `skip_locations` attribute is a *composite, constructor-processed field*.  
+The `skip_locations` attribute is a *composite, constructor-processed field*.
 During initialization, the framework expands the user‑declared value by merging:
 
 1. the class-level declaration (`skip_locations` or `_skip_locations`),
 2. the global user blacklist (`SimpleExceptionSettings.LOCATION_BLACKLIST`),
 3. the system-protected frames (`SimpleExceptionSettings._SYSTEM_BLACKLIST`).
 
-Because the final runtime value is always a **superset** of the class-level declaration, 
+Because the final runtime value is always a **superset** of the class-level declaration,
 strict equality cannot be used for validation.
 
-Instead, the validator:
+Instead, the validator (the local name of the expected prefix is `expected_prefix`, so it never
+shadows the `expected` parameter):
 
 - normalizes the expected value into a tuple (to avoid string‑splitting into characters),
 - and asserts that the declared values form a **prefix** of the fully processed sequence.
 
-This guarantees semantic correctness of constructor propagation while remaining independent 
+This guarantees semantic correctness of constructor propagation while remaining independent
 of global/system blacklist contents.
 
 """

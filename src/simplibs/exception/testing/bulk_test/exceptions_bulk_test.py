@@ -1,5 +1,4 @@
 from typing import Any
-from simplibs.sentinels import UNSET
 # Outers
 from ..assert_exception_class import assert_exception_class
 from ..assert_exception_function import assert_exception_function
@@ -7,6 +6,11 @@ from ..tools import maybe_subtest
 # Inners
 from .FuncCase import FuncCase
 from ._utils import is_exception_class, is_exception_function
+
+
+def _name_of(target: Any) -> str:
+    """Readable name of a function or any other callable (a partial or an instance has no `__name__`)."""
+    return getattr(target, "__name__", type(target).__name__)
 
 
 def exceptions_bulk_test(
@@ -41,7 +45,7 @@ def exceptions_bulk_test(
 
         # 1. Process explicit composite testing contexts encapsulated as FuncCase objects
         if isinstance(item, FuncCase):
-            intro = f"test_{item.func.__name__}::"
+            intro = f"test_{_name_of(item.func)}::"
 
             item.run_test(
                 subtests,
@@ -71,8 +75,8 @@ def exceptions_bulk_test(
         elif is_exception_function(item):
             exc_class = item[0]
             func = item[1]
-            raw_params = item[2:] if len(item) > 2 else UNSET
-            intro = f"test_{func.__name__}::"
+            raw_params = item[2:]  # an empty tuple when the function is called without arguments
+            intro = f"test_{_name_of(func)}::"
 
             assert_exception_function(
                 subtests,
@@ -96,22 +100,27 @@ _DESIGN_NOTES = """
 # exceptions_bulk_test (Public Testing Automation Matrix Orchestrator)
 
 ## Purpose
-The primary orchestration suite designed to minimize testing code duplication. It behaves 
-as an automated macro pipeline that accepts a high-level matrix profile of exception blueprints 
+The primary orchestration suite designed to minimize testing code duplication. It behaves
+as an automated macro pipeline that accepts a high-level matrix profile of exception blueprints
 and validation hooks, standardizing error interception and compliance reporting.
 
 ## Comparison Modalities (Opt-in Architecture)
-The engine defaults to substring inclusion (`in` operator) for maximum resilience against 
+The engine defaults to substring inclusion (`in` operator) for maximum resilience against
 minor diagnostic text changes. Explicit modes can be enabled:
 - **`exact_match=True`**: Enforces strict full-string equality.
 - **`startswith=True`**: Validates based on prefix matching.
 
 ## Operational Modalities
-1. **Shallow Mode (`deep_check=False`):** Optimized for fast CI passes. Checks functional intercept 
+1. **Shallow Mode (`deep_check=False`):** Optimized for fast CI passes. Checks functional intercept
    states and standard zero-argument instantiation passes on naked classes.
-2. **Deep Compliance Mode (`deep_check=True`):** Acts as an architectural gatekeeper. Discovered 
+2. **Deep Compliance Mode (`deep_check=True`):** Acts as an architectural gatekeeper. Discovered
    exception classes are subjected to inheritance, constructor, and serialization audits.
 
+## What a Tuple Item Does
+`(exception_class, function, *params)` goes to `assert_exception_function` with `invalid_params=params`,
+so a tuple without params calls the function with no arguments, and a trailing `Kwargs` is expanded
+into keyword arguments (a plain `dict` is a positional value). A tuple item always runs with
+`deep_check=False`; `deep_check` of the bulk test applies to naked exception classes and to `FuncCase`.
 ## Practical Usage Matrix Example
 
 ```python
@@ -130,7 +139,7 @@ def test_complete_settings_subsystem_matrix(subtests):
             (SimpleExceptionSettingsError, validate_dynamic_cls_cache, "invalid_cache_key"),
 
             # 4. Complex named keyword argument unpacking pass
-            (SimpleExceptionSettingsError, validate_message_mode, 999, {"strict": True})
+            (SimpleExceptionSettingsError, validate_message_mode, 999, Kwargs(strict=True))
         ],
         verbose=True,
         deep_check=True

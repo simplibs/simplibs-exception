@@ -35,7 +35,7 @@ def assert_class_interface(
         name=f"{intro}{subintro}test_str",
         verbose=verbose,
     ):
-        assert isinstance(str(exc), str)
+        assert isinstance(str(exc), str), f"str() of {exc_class.__name__} did not return a str."
 
     # 2. Verify developer-focused string representation
     with maybe_subtest(
@@ -43,7 +43,7 @@ def assert_class_interface(
         name=f"{intro}{subintro}test_repr",
         verbose=verbose,
     ):
-        assert isinstance(repr(exc), str)
+        assert isinstance(repr(exc), str), f"repr() of {exc_class.__name__} did not return a str."
 
     # 3. Verify core telemetry dictionary export
     with maybe_subtest(
@@ -51,7 +51,7 @@ def assert_class_interface(
         name=f"{intro}{subintro}test_to_dict",
         verbose=verbose,
     ):
-        assert isinstance(exc.to_dict(), dict)
+        assert isinstance(exc.to_dict(), dict), f"to_dict() of {exc_class.__name__} did not return a dict."
 
     # 4. Verify enriched debug dictionary export
     with maybe_subtest(
@@ -59,7 +59,9 @@ def assert_class_interface(
         name=f"{intro}{subintro}test_to_debug_dict",
         verbose=verbose,
     ):
-        assert isinstance(exc.to_debug_dict(), dict)
+        assert isinstance(exc.to_debug_dict(), dict), (
+            f"to_debug_dict() of {exc_class.__name__} did not return a dict."
+        )
 
     # 5. Verify string-serialized JSON export payload
     with maybe_subtest(
@@ -67,7 +69,7 @@ def assert_class_interface(
         name=f"{intro}{subintro}test_to_json",
         verbose=verbose,
     ):
-        assert isinstance(exc.to_json(), str)
+        assert isinstance(exc.to_json(), str), f"to_json() of {exc_class.__name__} did not return a str."
 
     return exc
 
@@ -76,23 +78,23 @@ _DESIGN_NOTES = """
 # assert_class_interface (Public API Interface Check)
 
 ## Purpose
-Acts as the contract enforcement gate for the exception's public-facing interface. It ensures that any 
-custom exception class correctly implements, preserves, and executes the entire suite of required 
-dunder formatting types and serializátor data-export channels.
+Acts as the contract enforcement gate for the exception's public-facing interface. It ensures that any
+custom exception class correctly implements, preserves, and executes the entire suite of required
+dunder formatting types and serializer data-export channels.
 
 ## Operational Verification Matrix
 The suite validates that the runtime execution outputs adhere strictly to the expected type specifications:
-- **`str(exc)` & `repr(exc)`:** Must yield valid string primitives, guaranteeing seamless integration 
+- **`str(exc)` & `repr(exc)`:** Must yield valid string primitives, guaranteeing seamless integration
   with terminal loggers, print routines, and trace representation engines.
 - **`to_dict()`:** Must yield a standard dictionary containing the baseline telemetry properties.
-- **`to_debug_dict()`:** Must yield an extended telemetry dictionary containing frame stack parameters 
+- **`to_debug_dict()`:** Must yield an extended telemetry dictionary containing frame stack parameters
   and deeper metadata tracking variables.
-- **`to_json()`:** Must return a valid serialized string block ready for across-the-wire JSON transmissions 
+- **`to_json()`:** Must return a valid serialized string block ready for across-the-wire JSON transmissions
   or automated file storage dumps.
 
 ## Pipeline Integration Value
-This routine focuses purely on **type compliance** rather than deep message content auditing. By separating 
-the superficial API contract validation from granular attribute string checks, it allows the master 
-orchestrators to pinpoint architectural method omission errors instantly before downstream content logic 
+This routine focuses purely on **type compliance** rather than deep message content auditing. By separating
+the superficial API contract validation from granular attribute string checks, it allows the master
+orchestrators to pinpoint architectural method omission errors instantly before downstream content logic
 scans are executed.
 """

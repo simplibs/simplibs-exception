@@ -110,6 +110,9 @@ This internal component serves as the core engine for all string-based assertion
 * Routes variables through the multi-mode evaluation gates (fuzzy, prefix, exact).
 * Leverages data sanitization to abstract type variance.
 * Maintains a clean, deterministic execution path.
+* Reports every failure with the field name, the expected and the actual value (the optional keyword-only
+`field=` of `compare_strings` and `compare_values`), because a plain `assert` in an installed package
+would fail with an empty message.
 
 ---
 

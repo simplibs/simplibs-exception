@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.5] - 2026-11-17
+
+### 🐛 Fixed
+
+* **`assert_function_raises` in `verbose=True`**: a function that raised nothing ended in a confusing
+  error from an empty `pytest.raises` context. It now stops with a clear `[Framework Guard]` message
+  that names the called arguments.
+* **`exceptions_bulk_test` tuple items without parameters**: `(ExceptionClass, func)` could never pass,
+  because the missing parameters were handed over as `UNSET`, which `process_params` always rejected.
+  It now calls the function without arguments. The documented example with `{"strict": True}` is
+  corrected to `Kwargs(strict=True)` (a plain `dict` is a positional value). A callable without
+  `__name__` (a `partial`, an instance) no longer fails when the test name is built.
+* **`assert_class_inheritance`**: passing something that is not a class raised `TypeError` from
+  `issubclass`; it is now a failed check with a message.
+
+### 🔄 Changed
+
+* **Failure messages**: the plain `assert` statements of the testing package carried no message, and
+  pytest does not rewrite asserts of an installed package, so they failed with an empty text. Every
+  such failure now names the field, the expected value and the actual value (`compare_strings`,
+  `compare_values`, `assert_exception_fields`, `assert_function_callable`, `assert_function_raises`,
+  `assert_class_inheritance`, `assert_class_interface`). `compare_strings` and `compare_values` take an
+  optional keyword-only `field=` for the message; existing calls are unaffected.
+
+### 📋 Improved
+
+* **Tests**: new tests for the no-exception guard, tuple items of `exceptions_bulk_test` and the failure
+  messages.
+* **Documentation**: corrected design notes (a local variable that shadowed the `expected` parameter, a
+  reference to the non-existent `generate_bulk_tests`, a leftover non-English word, the constructor
+  docstring) and short notes in the testing READMEs.
+
+---
+
 ## [1.1.4] - 2026-10-11
 
 ### 🐛 Fixed

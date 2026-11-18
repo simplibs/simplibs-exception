@@ -1,4 +1,3 @@
-import pytest
 from typing import Any
 # Outers
 from ...tools import maybe_subtest
@@ -14,9 +13,9 @@ def assert_class_constructor(
 ) -> Any:
     """Assert that an exception constructor accepts and stores all supported fields.
 
-    Instantiates the exception class using the supplied constructor arguments and
-    verifies that every provided value has been correctly propagated to the
-    resulting exception instance. It also performs a basic string representation smoke check.
+    Instantiates the exception class with one reference value for every supported
+    constructor argument and verifies that each of them has been correctly propagated
+    to the resulting exception instance. It also performs a basic string representation smoke check.
 
     Args:
         subtests: The native pytest subtests fixture manager instance.
@@ -113,20 +112,20 @@ _DESIGN_NOTES = """
 # assert_class_constructor (Constructor Propagation & String Smoke Audit)
 
 ## Purpose
-Validates the state initialization boundaries of custom exception classes. It explicitly ensures that 
-the exception's `__init__` constructor layer correctly intercepts, maps, and binds the entire 
+Validates the state initialization boundaries of custom exception classes. It explicitly ensures that
+the exception's `__init__` constructor layer correctly intercepts, maps, and binds the entire
 framework-supported telemetry dataset to the active instance layout.
 
 ## Single Source of Truth Pattern
-To guarantee complete diagnostic safety and eliminate duplicate literal typing, this engine 
-implements a rigid internal variable matrix (prefixed with underscores, e.g., `_message`). 
+To guarantee complete diagnostic safety and eliminate duplicate literal typing, this engine
+implements a rigid internal variable matrix (prefixed with underscores, e.g., `_message`).
 This matrix is mapped symmetrically across the inbound factory gate and the downstream evaluation gate.
 
 ## Balanced String Evaluation (Smoke Testing vs. Layout Isolation)
-A string representation audit (`str(dummy_exc)`) is executed to ensure that core identities 
-are successfully exposed to the end-user. 
-To prevent tight coupling with the elastic layout rendering engine (which dynamically reshapes 
-output based on active presentation modes, tabs, or colors), the evaluation strictly utilizes 
-fuzzy substring checking (`in` operator) confined exclusively to `error_name` and `message`. 
+A string representation audit (`str(dummy_exc)`) is executed to ensure that core identities
+are successfully exposed to the end-user.
+To prevent tight coupling with the elastic layout rendering engine (which dynamically reshapes
+output based on active presentation modes, tabs, or colors), the evaluation strictly utilizes
+fuzzy substring checking (`in` operator) confined exclusively to `error_name` and `message`.
 Exhaustive structural formatting tests are deliberately decoupled and isolated inside core framework layout suites.
 """

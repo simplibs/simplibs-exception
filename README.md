@@ -218,7 +218,7 @@ tracking depth backwards, and raises it.
 raise_with_location_offset(SimpleException("Failed"), offset=1)
 ```
 
-➡️ [README_RAISE_WITN_LOCATION_OFFSET.md](https://github.com/simplibs/simplibs-exception/blob/main/docs/tools/README_RAISE_WITN_LOCATION_OFFSET.md)
+➡️ [README_RAISE_WITH_LOCATION_OFFSET.md](https://github.com/simplibs/simplibs-exception/blob/main/docs/tools/README_RAISE_WITH_LOCATION_OFFSET.md)
 
 ### `@raise_location_offset` (Decorator)
 
